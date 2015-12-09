@@ -1,0 +1,8 @@
+*.py[cod]
+.ipynb_checkpoints
+*.txt
+*.log
+*.dta
+*.csv
+*.RR
+*.pkl
