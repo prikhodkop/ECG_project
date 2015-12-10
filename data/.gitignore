@@ -1,0 +1,7 @@
+# ignore everything except .gitignore and folders that I care about
+*
+!RR*
+!dta*
+!sample*
+!raw*
+!.gitignore
