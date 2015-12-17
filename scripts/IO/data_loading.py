@@ -7,7 +7,7 @@ import pandas as pd
 import sys
 sys.path.append('..') #!!!
 import project_config as conf
-
+from utils import logg 
 
 #TODO
 '''
@@ -33,7 +33,7 @@ def get_sleep_time(path_to_sleep):
           end[patient] += 24 * 60 * 60 * 1000
   return start, end
 
-def get_patients_list(path_to_patients):
+def get_patients_list_in_folder(path_to_patients):
   ''' Return list that consists of files with patients data '''
   files = os.listdir(path_to_patients)
   files = np.sort(np.array([f[:-3] for f in files if f[-3:] == '.RR'], dtype=np.int))
@@ -90,11 +90,11 @@ def load_RR_data(GIDN, path):
 def read_dta(name, data_folder='../../data/dta/', encoding='cp1252'):
   """
   Read .dta file
-  EXamples:
+  Examples:
     selected_pp
     mortality_SAHR_ver101214
   """
-  full_name = data_folder + name+'.dta'
+  full_name = data_folder + name +'.dta'
   
   with open(full_name, 'rb') as f:
     data = pd.read_stata(f, encoding=encoding)
@@ -108,45 +108,12 @@ def get_GIDNS(path_to_dta):
   """
   selected_pp = read_dta('selected_pp', data_folder=path_to_dta)
   GIDNS = np.array(selected_pp['GIDN'])
+  GIDNS = np.array(GIDNS).astype(np.int32)
   return GIDNS
 
 
-def configure_logging(output_dir=''):
-  #logging.basicConfig(format = u'%(filename)s [%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s', 
-  #  level = logging.WARNING, filename = u'log.log')
-
-  # logging.debug( u'This is a debug message' )
-  # logging.info( u'This is an info message' )
-  # logging.warning( u'This is a warning' )
-  # logging.error( u'This is an error message' )
-  # logging.critical( u'FATAL!!!' )
-
-  logger = logging.getLogger()
-  logger.setLevel(logging.DEBUG)
-   
-  # create console handler and set level to info
-  handler = logging.StreamHandler()
-  handler.setLevel(logging.DEBUG)
-  formatter = logging.Formatter("%(levelname)s - %(message)s")
-  handler.setFormatter(formatter)
-  logger.addHandler(handler)
-
-  # create error file handler and set level to error
-  handler = logging.FileHandler(os.path.join(output_dir, "info.log"),"w", encoding=None, delay="true")
-  handler.setLevel(logging.INFO)
-  formatter = logging.Formatter(u"%(filename)s [%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s")
-  handler.setFormatter(formatter)
-  logger.addHandler(handler)
-
-  # create debug file handler and set level to debug
-  handler = logging.FileHandler(os.path.join(output_dir, "debug.log"),"w")
-  handler.setLevel(logging.DEBUG)
-  formatter = logging.Formatter(u"%(filename)s [%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s")
-  handler.setFormatter(formatter)
-  logger.addHandler(handler)
-
 if __name__ == '__main__':
-  configure_logging()
+  logg.configure_logging()
 
   mortality = read_dta('mortality_SAHR_ver101214', data_folder=conf.path_to_dta)
   selected_pp = read_dta('selected_pp', data_folder=conf.path_to_dta)

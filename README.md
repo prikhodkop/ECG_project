@@ -2,7 +2,7 @@
 
 ## General
 
-Package provides some tools for Heart rate variability (HRV)
+Package provides some tools for Heart rate variability (HRV) analysis.
 
 ## Requirements
 
