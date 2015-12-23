@@ -16,9 +16,9 @@ GIDN is the patient identifier, [int.32]
 '''
 
 
-def get_sleep_time(path_to_sleep):
+def get_sleep_time(path_to_sleep_csv):
   ''' Read sleep and awake time '''
-  with open(path_to_sleep + 'sleep.csv', 'r') as csvfile:
+  with open(path_to_sleep_csv + 'sleep.csv', 'r') as csvfile:
     r = csv.reader(csvfile, delimiter=',')
     r.next()
     start = {}
@@ -31,7 +31,7 @@ def get_sleep_time(path_to_sleep):
         # new day
         if end[patient] < start:
           end[patient] += 24 * 60 * 60 * 1000
-  return start, end
+  return {'start': start, 'end': end}
 
 def get_patients_list_in_folder(path_to_patients):
   ''' Return list that consists of files with patients data '''
@@ -113,7 +113,7 @@ def get_GIDNS(path_to_dta):
 
 
 if __name__ == '__main__':
-  logg.configure_logging()
+  logg.configure_logging(console_level=logging.DEBUG)
 
   mortality = read_dta('mortality_SAHR_ver101214', data_folder=conf.path_to_dta)
   selected_pp = read_dta('selected_pp', data_folder=conf.path_to_dta)
