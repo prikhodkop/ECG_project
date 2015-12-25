@@ -55,6 +55,26 @@ def split_beats_chunks(filtered_data_RR, NUMBER_OF_BEATS_IN_CHUNK, MAX_NUMBER_OF
   raise Exception(msg)
 
 
+def time_initialization(splitted_data_RR):
+  """
+  Set start time for each chunk equal zero.
+  Data are not copied.
+
+  Args:
+    splitted_data_RR (list of np.array): np.array of np.int64 in format (time since midnight [ms], interval [ms])
+
+  Returns:
+    splitted_data_RR (list of np.array): np.array of np.int64 in format (time [ms], interval [ms])
+    initial_times (list of int): starting time in each chunk before initialization
+  """
+  initial_times = []
+  for data_RR in splitted_data_RR:
+    initial_times.append(data_RR[0, 0])
+    data_RR[:, 0] -= data_RR[0, 0]
+
+  return splitted_data_RR, initial_times
+
+
 
 if __name__ == '__main__':
   pass

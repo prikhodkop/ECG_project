@@ -9,7 +9,7 @@ def get_default_RR_filtering_params():
   Value 'None' means no actions.
   """
   filtering_params = OrderedDict(( ('interval type', 'N'),                 # e.g. None 
-                                   ('interval range', [200.0, 2000.0]),    # min_interval, max_interval
+                                   ('interval range', [200.0, 2000.0]),    # min_interval, max_interval, e.g. [None, 2000.0]
                                    ('successive intervals ration range', None) 
                                 ))
 
@@ -26,7 +26,7 @@ def filter_data_RR(data_RR, RR_filtering_params):
     RR_filtering_params (OrderedDict): see example in get_default_RR_filtering_params()
 
   Returns:
-    filtered_data_RR (np.array or None): data in format (time since midnight [ms], intervals [ms]), or
+    filtered_data_RR (np.array or None): data in format (time since midnight [ms], interval [ms]), or
                                          None if no data are available after filtering
     filtration_info (dict): initial and remaining intervals number
   """
@@ -50,7 +50,6 @@ def filter_data_RR(data_RR, RR_filtering_params):
       
       elif filter_name == 'successive intervals ration range':
         min_ratio, max_ratio = RR_filtering_params[filter_name]
-        
         #TODO
         if min_ratio is not None or max_ratio is not None:  
           msg = 'Filtration based on successive intervals ration range is not implemented.'

@@ -3,7 +3,13 @@ import logging
 
 import sys
 sys.path.append('..')
-import project_config as conf
+
+try:
+  import user_project_config as conf
+except:
+  import project_config as conf
+
+
 from IO import data_loading as dl
 from utils import logg 
 from utils import data_processing as dp
@@ -22,7 +28,12 @@ if __name__ == '__main__':
   
   RR_filtering_params = df.get_default_RR_filtering_params()
   
-  features_params = fea.get_default_features_params()
+  #pulse_features_params = fea.get_default_pulse_features_params()
+  pulse_features_params =  {'time features':      {},     
+                            'frequency features': None,
+                            'nonlinear features': None
+                           }
+
 
   OBJECTIVE_NAME = 'BMIgr' #'Sex' # 'cl_sleep_interval'
   SEED = 0
@@ -86,6 +97,7 @@ if __name__ == '__main__':
       continue
     
     ####### Filter intervals of given types and lengths #######
+
     filtered_data_RR, filtration_info = df.filter_data_RR(data_RR, RR_filtering_params)
     # filtered_data_RR (np.array) in format (time since midnight [ms], intervals [ms])
     if filtered_data_RR is None:
@@ -113,14 +125,17 @@ if __name__ == '__main__':
     # splitted_data_RR (list of np.arrays)
 
     GIDN_y = obj.generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN)
-    # list of objective values
+    # list of objective values (float)
     msg = 'Objective values for chunks: %s'%GIDN_y
     logging.debug(msg)
-     
-    #!!!
-    #GIDN_features = fea.generate_features(splitted_data_RR, features_params)
-    # list
-    GIDN_features = splitted_data_RR #!!!!
+
+    splitted_data_RR, initial_times = dp.time_initialization(splitted_data_RR)
+    logging.debug('Set start time for each chunk equal zero')
+    # splitted_data_RR (list of np.array): np.array of np.int64 in format (time [ms], intervals [ms])
+
+    splitted_features, names = fea.generate_pulse_features(splitted_data_RR, pulse_features_params)
+  
+    zxc
 
     X += GIDN_features
     y += GIDN_y
