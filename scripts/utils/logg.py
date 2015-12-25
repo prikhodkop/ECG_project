@@ -31,6 +31,14 @@ def configure_logging(console_level=logging.INFO, output_dir='../logs/'):
 
   current_datetime = time.strftime("%Y-%m-%d %H-%M-%S")
   # create error file handler and set level to error
+
+  handler = logging.FileHandler(os.path.join(output_dir, current_datetime+" warning.log"),"w", encoding=None, delay="true")
+  handler.setLevel(logging.WARNING)
+  formatter = logging.Formatter(u"%(filename)s [%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s")
+  handler.setFormatter(formatter)
+  logger.addHandler(handler)
+
+
   handler = logging.FileHandler(os.path.join(output_dir, current_datetime+" info.log"),"w", encoding=None, delay="true")
   handler.setLevel(logging.INFO)
   formatter = logging.Formatter(u"%(filename)s [%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s")

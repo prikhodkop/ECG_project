@@ -11,7 +11,7 @@ from utils import logg
 
 #TODO
 '''
-.RR files contain information on pulse: (time [ms], duration [ms], beat type) #!!!
+.RR files contain information about pulse: (time [ms], duration [ms], beat type) #!!!
 GIDN is the patient identifier, [int.32]
 '''
 
@@ -49,7 +49,7 @@ def load_RR_data(GIDN, path):
         path (str): path to data files containing pulse information (.RR)
     Returns:
         - None if .RR file does not exist or
-        - np.array: (time, interval, type):
+        - np.array: (time since midnight [ms], beat-beat interval [ms], interval type)
           * time of pulse beat [ms], starting from midnight;
           * interval between successive beats [ms];
           * interval type ['N', 'A', etc.]. Note that 'N' is a normal type and preferable.
