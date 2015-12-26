@@ -24,7 +24,7 @@ if __name__ == '__main__':
   # Settings
   FIXED_GIDNS_LIST = None # If specified, only these GIDNS are considered
   
-  MAX_PATIENTS_NUMBER = 30 # or None #!!!
+  MAX_PATIENTS_NUMBER = 1800 # or None #!!!
   
   RR_filtering_params = df.get_default_RR_filtering_params()
   
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                            }
 
 
-  OBJECTIVE_NAME = 'BMIgr' #'Sex' # 'cl_sleep_interval'
+  OBJECTIVE_NAME = 'cl_sleep_interval'#'BMIgr' #'Sex' # 'cl_sleep_interval'
   SEED = 0
   
   MAX_NUMBER_OF_CHUNKS_PER_PATIENT = None
@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
   stat_info = { 'mortality':   dl.read_dta('mortality_SAHR_ver101214', data_folder=conf.path_to_dta),
                 'selected_pp': dl.read_dta('selected_pp', data_folder=conf.path_to_dta),
-                'sleep':       dl.read_dta('sleep', data_folder=conf.path_to_dta) 
+                'sleep':       dl.get_sleep_time(conf.path_to_dta)
               } # dl.get_sleep_time(path_to_sleep_csv=conf.path_to_dta)
 
   #################################################################
@@ -133,11 +133,11 @@ if __name__ == '__main__':
     logging.debug('Set start time for each chunk equal zero')
     # splitted_data_RR (list of np.array): np.array of np.int64 in format (time [ms], intervals [ms])
 
-    splitted_features, names = fea.generate_pulse_features(splitted_data_RR, pulse_features_params)
+    # splitted_features, names = fea.generate_pulse_features(splitted_data_RR, pulse_features_params)
   
-    zxc
+    #zxc
 
-    X += GIDN_features
+    #X += GIDN_features
     y += GIDN_y
 
 
@@ -154,7 +154,7 @@ if __name__ == '__main__':
   logging.info('No data after splitting for %s patients out of %s'%(len(splitproblem_patients), len(GIDNS)))
   logging.info('Filtered patients: %s'%splitproblem_patients)
   
-  zxc
+  #zxc
 
   split_GIDNS_for_test(GIDNS, method)
   

@@ -29,8 +29,12 @@ def get_sleep_time(path_to_sleep_csv):
         start[patient] = float(row[7])
         end[patient] = float(row[8])
         # new day
+        if start[patient] / 3600000. < 3:
+          start[patient] += 24 * 60 * 60 * 1000
+
         if end[patient] < start:
           end[patient] += 24 * 60 * 60 * 1000
+
   return {'start': start, 'end': end}
 
 def get_patients_list_in_folder(path_to_patients):

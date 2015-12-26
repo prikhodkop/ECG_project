@@ -53,6 +53,21 @@ def get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN):
   We suppose that 'sleep' == 1.0, 'awake' == 0.0.
   """
   sleep = stat_info['sleep'] # from .dta file
+  #print splitted_data_RR
+  #print sleep
+  if GIDN in sleep['start'].keys():
+    start_sleep = sleep['start'][GIDN]
+    end_sleep = sleep['end'][GIDN]
+  else:
+    start_sleep = 0
+    end_sleep = 0
+
+
+  y = []
+  for i in xrange(len(splitted_data_RR)):
+    idx = (splitted_data_RR[i][:, 0] > start_sleep) * (splitted_data_RR[i][:, 0] < end_sleep)
+    y.append(np.round(splitted_data_RR[i][idx, 0].shape[0] / float(splitted_data_RR[i][:, 0].shape[0])))
+
 
   #TODO
   
