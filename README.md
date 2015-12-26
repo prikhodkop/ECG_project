@@ -8,6 +8,7 @@ Package provides some tools for Heart rate variability (HRV) analysis.
 
 * numpy
 * pandas
+* h5py
 
 
 ## Project structure

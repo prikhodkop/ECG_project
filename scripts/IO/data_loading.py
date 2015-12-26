@@ -3,6 +3,7 @@ import csv
 import os
 import logging
 import pandas as pd
+import h5py
 
 import sys
 sys.path.append('..') #!!!
@@ -111,6 +112,21 @@ def get_GIDNS(path_to_dta):
   GIDNS = np.array(GIDNS).astype(np.int32)
   return GIDNS
 
+
+def save_hdf5_sample(sample_name, trainX, trainY, testX, testY):
+  hdf5_filename = conf.path_to_sample+sample_name+'.h5'
+  h5f = h5py.File(hdf5_filename, 'w')
+  h5f.create_dataset('trainX', data=trainX)
+  h5f.create_dataset('trainY', data=trainY)
+  h5f.create_dataset('testX', data=testX)
+  h5f.create_dataset('testY', data=testY)
+  h5f.close()
+  return hdf5_filename
+
+  # h5py.File('data.h5','r')
+  # b = h5f['dataset_1'][:]
+  # h5f.close()
+  # np.allclose(a,b)
 
 if __name__ == '__main__':
   logg.configure_logging(console_level=logging.DEBUG)

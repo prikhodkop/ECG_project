@@ -19,7 +19,7 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
     GIDN (int): unique identifier of the patient
 
   Returns
-    y (list of floats): objective, e.g. sex, age, sleep status
+    y (np.array of floats): objective, e.g. sex, age, sleep status
   """
 
   if OBJECTIVE_NAME == 'cl_sleep_interval':
@@ -33,7 +33,7 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
     logging.critical(msg)
     raise Exception(msg)
 
-  return y
+  return np.array([y]).T
 
 
 def get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):

@@ -128,6 +128,38 @@ def calculate_nonlinear_features(data_RR, nonlinear_options):
   raise Exception(msg)
 
 
+def get_stat_features(stat_features_names, stat_info, GIDN):
+  # TODO
+
+  if stat_features_names:
+    msg = 'Not implemented statistical features' #TODO
+    logging.critical(msg)
+    raise Exception(msg)
+
+  stat_features = None
+  return stat_features
+  
+
+def get_features_matrix(splitted_pulse_features):
+  """
+  Args
+    splitted_pulse_features (list of np.array of floats)
+
+  Returns
+    pulse_features_matrix
+  """
+
+  try:
+    pulse_features_matrix = np.vstack(splitted_pulse_features)
+  except Exception as e:
+    msg = "Can\'t transform splitted features to matrix: %s"%e
+    logging.critical(msg)
+    raise Exception(msg)
+
+  return pulse_features_matrix
+
+  
+
 if __name__ == '__main__':
   pass
 

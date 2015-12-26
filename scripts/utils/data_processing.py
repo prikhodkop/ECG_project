@@ -75,6 +75,46 @@ def time_initialization(splitted_data_RR):
   return splitted_data_RR, initial_times
 
 
+def split_GIDNS_for_test(GIDNS, TEST_PARTITION, TEST_PORTION):
+  """
+  Separate train and test GIDNS
+
+  Args:
+    GIDNS (list of int): patients for separation
+    TEST_PARTITION (str): partition method
+    TEST_PORTION (float): portion of GIDNS for test
+
+  Returns:
+    train_GIDNS (list of int)
+    test_GIDNS (list of int)
+    info (dict)
+  """
+
+  test_number = int( TEST_PORTION * float(len(GIDNS)) )
+  if test_number < 1:
+    msg = 'No data for testing'
+    logging.error(msg)
+    raise Exception(msg)
+  elif test_number <= 10:
+    msg = 'Only %s patients are used for testing'%test_number
+    logging.warning(msg)
+
+
+  if TEST_PARTITION == 'random':
+    test_GIDNS = np.random.choice(GIDNS, size=test_number, replace=False)
+    train_GIDNS = [GIDN for GIDN in GIDNS if GIDN not in test_GIDNS]
+     
+  else:
+    msg = 'Not implemented' #TODO
+    logging.critical(msg)
+    raise Exception(msg)
+
+  info = {'test GIDNS':len(test_GIDNS), 'train GIDNS':len(train_GIDNS)}
+  return train_GIDNS, test_GIDNS, info
+
 
 if __name__ == '__main__':
   pass
+
+  #a = [1,2,3,4,5]  
+  #print np.random.choice(a, size=3, replace=False)
