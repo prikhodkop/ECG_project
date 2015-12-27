@@ -65,8 +65,8 @@ def get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN):
 
   y = []
   #for i in xrange(len(splitted_data_RR)):
-    #idx = (splitted_data_RR[i][:, 0] > start_sleep) * (splitted_data_RR[i][:, 0] < end_sleep)
-    #y.append(np.round(splitted_data_RR[i][idx, 0].shape[0] / float(splitted_data_RR[i][:, 0].shape[0]))) 
+  # idx = (splitted_data_RR[i][:, 0] > start_sleep) * (splitted_data_RR[i][:, 0] < end_sleep)
+  # y.append(np.round(splitted_data_RR[i][idx, 0].shape[0] / float(splitted_data_RR[i][:, 0].shape[0]))) 
     
   for data_RR in splitted_data_RR:
     beat_times = data_RR[:, 0] # np.array
