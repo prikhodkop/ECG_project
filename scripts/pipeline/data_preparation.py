@@ -31,7 +31,7 @@ if __name__ == '__main__':
   ###########################################################
   # Settings
   FIXED_GIDNS_LIST = None # If specified, only these GIDNS are considered
-  MAX_PATIENTS_NUMBER = None # or None #!!!
+  MAX_PATIENTS_NUMBER = None # Note that None related ALL PATIENTS
   
   RR_filtering_params = df.get_default_RR_filtering_params()
   
@@ -42,8 +42,8 @@ if __name__ == '__main__':
                            }
   stat_features_names = []  # e.g. ['Sex', 'BMIgr']
 
-  OBJECTIVE_NAME = 'Sex'# 'BMIgr', 'Sex', 'cl_sleep_interval'
-  sample_name = OBJECTIVE_NAME + '_1' # training / test filename
+  OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
+  sample_name = OBJECTIVE_NAME + '_1' # train-test filename
   SEED = 0
   
   MAX_NUMBER_OF_CHUNKS_PER_PATIENT = None
@@ -62,13 +62,12 @@ if __name__ == '__main__':
   ###############################################################
   # Initial configuration
   np.random.seed(SEED)
-  #logg.configure_logging(console_level=logging.DEBUG) # logging.INFO
-  logg.configure_logging()
+  logg.configure_logging() # For more details use logg.configure_logging(console_level=logging.DEBUG)
 
   stat_info = { 'mortality':   dl.read_dta('mortality_SAHR_ver101214', data_folder=conf.path_to_dta),
                 'selected_pp': dl.read_dta('selected_pp', data_folder=conf.path_to_dta),
                 'sleep':       dl.read_dta('sleep', data_folder=conf.path_to_dta) 
-              } # dl.get_sleep_time(path_to_sleep_csv=conf.path_to_dta)
+              }
 
   #################################################################
   
@@ -80,7 +79,7 @@ if __name__ == '__main__':
     asked_GIDNS = dl.get_GIDNS(path_to_dta=conf.path_to_dta)
     if MAX_PATIENTS_NUMBER is not None:
       logging.warning('Only first %s patients are used in this study'%MAX_PATIENTS_NUMBER)
-      asked_GIDNS = asked_GIDNS[:MAX_PATIENTS_NUMBER] #!!!  
+      asked_GIDNS = asked_GIDNS[:MAX_PATIENTS_NUMBER]  
 
   logging.debug('asked_GIDNS: %s'%asked_GIDNS)
   logging.info('Searching for %s patients'%len(asked_GIDNS))
@@ -89,10 +88,12 @@ if __name__ == '__main__':
   ######## Load and process data for specified GIDNS ################
   abcent_patients = []
   filtered_patients = []
-  splitproblem_patients = []
+  split_problem_patients = []
+  objective_problem_patients = [] 
   loaded_GIDNS = [] # successfully loaded patients in ascending order
   X = {}
   y = {}
+  logging.info('Starting data processing')
   for patient_number, GIDN in enumerate(asked_GIDNS):
     
     msg = 'GIDN %s. Patient %s out of %s processing.'%(GIDN, patient_number+1, len(asked_GIDNS))
@@ -131,14 +132,17 @@ if __name__ == '__main__':
         MAX_NUMBER_OF_CHUNKS_PER_PATIENT)
     
     if splitted_data_RR is None:
-      splitproblem_patients.append(GIDN)
+      split_problem_patients.append(GIDN)
       continue
     logging.debug('Splitting intervals')
     
 
     GIDN_y = obj.generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN) # np.array of objective values (float)
-    #msg = 'Objective values for chunks: %s'%GIDN_y
-    #logging.debug(msg)
+    if GIDN_y is None:
+      objective_problem_patients.append(GIDN)
+      continue
+    # msg = 'Objective values for chunks: %s'%GIDN_y
+    # logging.debug(msg)
 
     splitted_data_RR, initial_times = dp.time_initialization(splitted_data_RR) # splitted_data_RR (list of np.array): 
     logging.debug('Set start time for each chunk equal zero') # np.array of np.int64 in format (time [ms], intervals [ms])
@@ -149,7 +153,7 @@ if __name__ == '__main__':
 
     stat_features = fea.get_stat_features(stat_features_names, stat_info, GIDN) #TODO
 
-    GIDN_features = fea.get_features_matrix(splitted_pulse_features) # (np.array) chunks * features
+    GIDN_features = fea.get_features_matrix(splitted_pulse_features) # (np.array) [chunks * features]
 
     X[GIDN] = GIDN_features
     y[GIDN] = GIDN_y
@@ -166,9 +170,14 @@ if __name__ == '__main__':
     logging.info('No data are available after filtration for %s patients out of %s'%(len(filtered_patients), len(asked_GIDNS)))
     logging.info('Filtration problem patients: %s'%filtered_patients)
   
-  if splitproblem_patients:
-    logging.info('No data after splitting for %s patients out of %s'%(len(splitproblem_patients), len(asked_GIDNS)))
-    logging.info('Split problem patients: %s'%splitproblem_patients)
+  if split_problem_patients:
+    logging.info('No data after splitting for %s patients out of %s'%(len(split_problem_patients), len(asked_GIDNS)))
+    logging.info('Split problem patients: %s'%split_problem_patients)
+
+  if objective_problem_patients:
+    logging.info('No objective for %s patients out of %s'%(len(objective_problem_patients), len(asked_GIDNS)))
+    logging.info('Objective problem patients: %s'%objective_problem_patients)
+
     
   ### Prepare training / test samples ##########
 
@@ -179,37 +188,24 @@ if __name__ == '__main__':
   def combine_splitted_dict(d, GIDNS):
     combined = [d[GIDN] for GIDN in GIDNS]
     return np.vstack(combined)
-
+ 
   trainX = combine_splitted_dict(X, train_GIDNS)
   trainY = combine_splitted_dict(y, train_GIDNS)
   testX = combine_splitted_dict(X, test_GIDNS)
   testY = combine_splitted_dict(y, test_GIDNS)
   su.check_memory()
 
-  #X.clear() #!!!
-  #y.clear() #!!!
+  logging.warning('trainX: %s examples, %s features'%trainX.shape)
+  logging.warning('trainY: %s examples, %s objectives'%trainY.shape)
+  logging.warning('testX: %s examples, %s features'%testX.shape)
+  logging.warning('testY: %s examples, %s objectives'%testY.shape)
+  test_examples_percentage = 100.0 * float(testX.shape[0]) / (trainX.shape[0]+testX.shape[0])
+  logging.warning('Test examples percentage: %.1f%%'%test_examples_percentage)
 
-  print trainX.shape
-  print trainY.shape
-  print testX.shape
-  print testY.shape
 
   path = dl.save_hdf5_sample(sample_name, trainX, trainY, testX, testY)
-  logging.info('Samples are saved in hdf5 format: '+path)
+  logging.info('Training and test samples are saved in hdf5 format: '+path)
   
   su.check_memory(verbose=True)
   logging.info('Data processing is finished')
   
-  '''
-  ###### Model building ###########
-
-  trainX, trainY, testX, testY = load_train_test_data()
-
-  model = build_model(trainX, trainY, model_configuration, sample_configuration)
-  save_model(model_name, model)
-  report = validate_models(models_list, testX, testY, draw_pictures=True)
-  '''
-  #!!!
-  #d = dict(globals())
-  #d.update(locals())
-  #print d

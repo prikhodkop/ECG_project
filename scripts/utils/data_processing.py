@@ -116,5 +116,3 @@ def split_GIDNS_for_test(GIDNS, TEST_PARTITION, TEST_PORTION):
 if __name__ == '__main__':
   pass
 
-  #a = [1,2,3,4,5]  
-  #print np.random.choice(a, size=3, replace=False)
