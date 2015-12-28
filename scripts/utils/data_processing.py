@@ -112,6 +112,14 @@ def split_GIDNS_for_test(GIDNS, TEST_PARTITION, TEST_PORTION):
   info = {'test GIDNS':len(test_GIDNS), 'train GIDNS':len(train_GIDNS)}
   return train_GIDNS, test_GIDNS, info
 
+def training_stats(trainX, trainY, testX, testY):
+  logging.warning('trainX: %s examples, %s features'%trainX.shape)
+  logging.warning('trainY: %s examples, %s objectives'%trainY.shape)
+  logging.warning('testX: %s examples, %s features'%testX.shape)
+  logging.warning('testY: %s examples, %s objectives'%testY.shape)
+  test_examples_percentage = 100.0 * float(testX.shape[0]) / (trainX.shape[0]+testX.shape[0])
+  logging.warning('Test examples percentage: %.1f%%'%test_examples_percentage)
+
 
 if __name__ == '__main__':
   pass

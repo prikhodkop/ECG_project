@@ -123,10 +123,18 @@ def save_hdf5_sample(sample_name, trainX, trainY, testX, testY):
   h5f.close()
   return hdf5_filename
 
-  # h5py.File('data.h5','r')
-  # b = h5f['dataset_1'][:]
-  # h5f.close()
-  # np.allclose(a,b)
+def load_hdf5_sample(sample_name):
+  hdf5_filename = conf.path_to_sample+sample_name+'.h5'
+  
+  h5f = h5py.File(hdf5_filename,'r')
+  trainX = h5f['trainX'][:]
+  trainY = h5f['trainY'][:]
+  testX = h5f['testX'][:]
+  testY = h5f['testY'][:]
+
+  sample_info = {'path': hdf5_filename}
+  return trainX, trainY, testX, testY, sample_info
+
 
 if __name__ == '__main__':
   logg.configure_logging(console_level=logging.DEBUG)
