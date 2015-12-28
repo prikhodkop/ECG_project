@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
   stat_info = { 'mortality':   dl.read_dta('mortality_SAHR_ver101214', data_folder=conf.path_to_dta),
                 'selected_pp': dl.read_dta('selected_pp', data_folder=conf.path_to_dta),
-                'sleep':       dl.read_dta('sleep', data_folder=conf.path_to_dta) 
+                'sleep':       dl.get_sleep_time(conf.path_to_dta) 
               }
 
   #################################################################
@@ -157,6 +157,7 @@ if __name__ == '__main__':
 
     X[GIDN] = GIDN_features
     y[GIDN] = GIDN_y
+    print GIDN_y.reshape(-1)
     loaded_GIDNS.append(GIDN)
     su.check_memory()
   

@@ -17,22 +17,30 @@ GIDN is the patient identifier, [int.32]
 '''
 
 
-def get_sleep_time(path_to_sleep_csv):
+def get_sleep_time(path_to_sleep):
   ''' Read sleep and awake time '''
-  with open(path_to_sleep_csv + 'sleep.csv', 'r') as csvfile:
-    r = csv.reader(csvfile, delimiter=',')
-    r.next()
-    start = {}
-    end = {}
-    for row in r:
-      if not ((row[7] == '') and (row[8] == '')):
-        patient = int(row[1])
-        start[patient] = float(row[7])
-        end[patient] = float(row[8])
-        # new day
-        if end[patient] < start:
-          end[patient] += 24 * 60 * 60 * 1000
-  return {'start': start, 'end': end}
+  sleep = read_dta('sleep', data_folder=conf.path_to_dta)
+  GIDNs = sleep['GIDN']
+  start = sleep['Hol_Sleep_Start_Trend']
+  end = sleep['Hol_Sleep_End_Trend']
+  sleep_time = {'start':{}, 'end':{}}
+
+  for i, gidn in enumerate(GIDNs):
+    if (start[i] == '') or (end[i] == ''):
+      start[i] = 0
+      end[i] = 0
+
+    sleep_time['start'][gidn] = float(start[i])
+    sleep_time['end'][gidn] = float(end[i])
+
+    # new day
+    if sleep_time['start'][gidn] / (60 * 60 * 1000) < 18:
+      sleep_time['start'][gidn] += 24 * 60 * 60 * 1000
+
+    if sleep_time['end'][gidn] < sleep_time['start'][gidn]:
+      sleep_time['end'][gidn] += 24 * 60 * 60 * 1000
+    print sleep_time['start'][gidn], sleep_time['end'][gidn]
+  return sleep_time
 
 def get_patients_list_in_folder(path_to_patients):
   ''' Return list that consists of files with patients data '''
