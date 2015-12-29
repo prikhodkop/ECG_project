@@ -26,7 +26,7 @@ def get_sleep_time(path_to_sleep):
   sleep_time = {'start':{}, 'end':{}}
 
   for i, gidn in enumerate(GIDNs):
-    if (start[i] != '') and (end[i] != ''):
+    if (not np.isnan(start[i])) and (not np.isnan(end[i])):
       sleep_time['start'][gidn] = float(start[i])
       sleep_time['end'][gidn] = float(end[i])
 

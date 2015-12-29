@@ -33,7 +33,10 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
     logging.critical(msg)
     raise Exception(msg)
 
-  return np.array([y]).T
+  if y is None:
+    return None
+  else:
+    return np.array([y]).T
 
 
 def get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
@@ -55,22 +58,21 @@ def get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN):
   sleep = stat_info['sleep'] # from .dta file
 
   if not (GIDN in sleep['start'].keys()):
-    return [None]*len(splitted_data_RR)
+    return None
   else:
     start_sleep = sleep['start'][GIDN]
     end_sleep = sleep['end'][GIDN]
 
     y = []    
     for data_RR in splitted_data_RR:
-      if (start_sleep and end_sleep):
-        y.append(None)
+      beat_times = data_RR[:, 0] # np.array
+      indixes_of_sleep_beats = (beat_times > start_sleep) * (beat_times < end_sleep)
+      if sum(indixes_of_sleep_beats) / float(len(indixes_of_sleep_beats)) > 0.5:
+        y.append(1.0)
       else:
-        beat_times = data_RR[:, 0] # np.array
-        indixes_of_sleep_beats = (beat_times > start_sleep) * (beat_times < end_sleep)
-        if sum(indixes_of_sleep_beats) / float(len(indixes_of_sleep_beats)) > 0.5:
-          y.append(1.0)
-        else:
-          y.append(0.0)
+        y.append(0.0)
+    if sum(y) == 0:
+      print start_sleep, end_sleep
     
     return y
 
