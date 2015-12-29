@@ -71,8 +71,6 @@ def get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN):
         y.append(1.0)
       else:
         y.append(0.0)
-    if sum(y) == 0:
-      print start_sleep, end_sleep
     
     return y
 
