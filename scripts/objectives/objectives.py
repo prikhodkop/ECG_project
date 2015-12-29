@@ -53,35 +53,26 @@ def get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN):
   We suppose that 'sleep' == 1.0, 'awake' == 0.0.
   """
   sleep = stat_info['sleep'] # from .dta file
-  #print splitted_data_RR
-  #print sleep
-  if GIDN in sleep['start'].keys():
+
+  if not (GIDN in sleep['start'].keys()):
+    return [None]*len(splitted_data_RR)
+  else:
     start_sleep = sleep['start'][GIDN]
     end_sleep = sleep['end'][GIDN]
-  else:
-    start_sleep = 0
-    end_sleep = 0
 
-
-  y = []
-  #for i in xrange(len(splitted_data_RR)):
-  # idx = (splitted_data_RR[i][:, 0] > start_sleep) * (splitted_data_RR[i][:, 0] < end_sleep)
-  # y.append(np.round(splitted_data_RR[i][idx, 0].shape[0] / float(splitted_data_RR[i][:, 0].shape[0]))) 
-    
-  for data_RR in splitted_data_RR:
-    if (start_sleep == 0) and (end_sleep == 0):
-      y.append(None)
-    else:
-      beat_times = data_RR[:, 0] # np.array
-      indixes_of_sleep_beats = (beat_times > start_sleep) * (beat_times < end_sleep)
-      if sum(indixes_of_sleep_beats) / float(len(indixes_of_sleep_beats)) > 0.5:
-        y.append(1.0)
+    y = []    
+    for data_RR in splitted_data_RR:
+      if (start_sleep and end_sleep):
+        y.append(None)
       else:
-        y.append(0.0)
+        beat_times = data_RR[:, 0] # np.array
+        indixes_of_sleep_beats = (beat_times > start_sleep) * (beat_times < end_sleep)
+        if sum(indixes_of_sleep_beats) / float(len(indixes_of_sleep_beats)) > 0.5:
+          y.append(1.0)
+        else:
+          y.append(0.0)
     
-    
-  
-  return y
+    return y
 
 
 

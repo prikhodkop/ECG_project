@@ -141,8 +141,9 @@ if __name__ == '__main__':
     if GIDN_y is None:
       objective_problem_patients.append(GIDN)
       continue
-    # msg = 'Objective values for chunks: %s'%GIDN_y
-    # logging.debug(msg)
+      
+    msg = 'Objective values for chunks: %s'%GIDN_y
+    logging.debug(msg)
 
     splitted_data_RR, initial_times = dp.time_initialization(splitted_data_RR) # splitted_data_RR (list of np.array): 
     logging.debug('Set start time for each chunk equal zero') # np.array of np.int64 in format (time [ms], intervals [ms])
@@ -157,7 +158,6 @@ if __name__ == '__main__':
 
     X[GIDN] = GIDN_features
     y[GIDN] = GIDN_y
-    print GIDN_y.reshape(-1)
     loaded_GIDNS.append(GIDN)
     su.check_memory()
   
