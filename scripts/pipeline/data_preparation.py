@@ -35,11 +35,11 @@ if __name__ == '__main__':
   
   RR_filtering_params = df.get_default_RR_filtering_params()
   
-  #e.g. pulse_features_params = fea.get_default_pulse_features_params()
-  pulse_features_params =  {'time features':      {},     
-                            'frequency features': None,
-                            'nonlinear features': None
-                           }
+  pulse_features_params = fea.get_default_pulse_features_params()
+  # pulse_features_params =  {'time features':      {},     
+  #                          'frequency features': None,
+  #                          'nonlinear features': None
+  #                         }
   stat_features_names = []  # e.g. ['Sex', 'BMIgr']
 
   OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
