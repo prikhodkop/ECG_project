@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
   stat_info = { 'mortality':   dl.read_dta('mortality_SAHR_ver101214', data_folder=conf.path_to_dta),
                 'selected_pp': dl.read_dta('selected_pp', data_folder=conf.path_to_dta),
-                'sleep':       dl.read_dta('sleep', data_folder=conf.path_to_dta) 
+                'sleep':       dl.get_sleep_time(conf.path_to_dta) 
               }
 
   #################################################################
@@ -119,7 +119,6 @@ if __name__ == '__main__':
       continue
     msg = 'Filtration of intervals: %s'%filtration_info
     logging.debug(msg)
-    
 
     ###### Splitting data into chunks ###########
 
@@ -136,18 +135,17 @@ if __name__ == '__main__':
       continue
     logging.debug('Splitting intervals')
     
-
     GIDN_y = obj.generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN) # np.array of objective values (float)
     if GIDN_y is None:
       objective_problem_patients.append(GIDN)
       continue
-    # msg = 'Objective values for chunks: %s'%GIDN_y
-    # logging.debug(msg)
+    
+    msg = 'Objective values for chunks: %s'%GIDN_y
+    logging.debug(msg)
 
     splitted_data_RR, initial_times = dp.time_initialization(splitted_data_RR) # splitted_data_RR (list of np.array): 
     logging.debug('Set start time for each chunk equal zero') # np.array of np.int64 in format (time [ms], intervals [ms])
     
-
     splitted_pulse_features, pulse_features_names = fea.generate_pulse_features(splitted_data_RR, 
       pulse_features_params) # (list of np.array of floats)
 
