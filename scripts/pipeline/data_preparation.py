@@ -34,16 +34,15 @@ if __name__ == '__main__':
   MAX_PATIENTS_NUMBER = None # Note that None related ALL PATIENTS
   
   RR_filtering_params = df.get_default_RR_filtering_params()
+  logging.warning('Filtering parameters:\n%s'%RR_filtering_params)
   
   pulse_features_params = fea.get_default_pulse_features_params()
-  # pulse_features_params =  {'time features':      {},     
-  #                          'frequency features': None,
-  #                          'nonlinear features': None
-  #                         }
+  logging.warning('Pulse features parameters:\n%s'%pulse_features_params)
+
   stat_features_names = []  # e.g. ['Sex', 'BMIgr']
 
   OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
-  sample_name = OBJECTIVE_NAME + '_1' # train-test filename
+  sample_name = OBJECTIVE_NAME + '_3' # train-test filename
   SEED = 0
   
   MAX_NUMBER_OF_CHUNKS_PER_PATIENT = None
@@ -93,7 +92,7 @@ if __name__ == '__main__':
   loaded_GIDNS = [] # successfully loaded patients in ascending order
   X = {}
   y = {}
-  logging.info('Starting data processing')
+  logging.info('Starting data preparation')
   for patient_number, GIDN in enumerate(asked_GIDNS):
     
     msg = 'GIDN %s. Patient %s out of %s processing.'%(GIDN, patient_number+1, len(asked_GIDNS))
@@ -135,12 +134,11 @@ if __name__ == '__main__':
       continue
     logging.debug('Splitting intervals')
     
-    GIDN_y, output_names = obj.generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN) # np.array of objective values (float)
+    GIDN_y, objective_classes_names = obj.generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN) # np.array of objective values (float)
     if GIDN_y is None:
       objective_problem_patients.append(GIDN)
       continue
-    
-    msg = 'Objective values for chunks: %s'%GIDN_y
+    msg = 'Objective values for chunks: %s'%GIDN_y.T
     logging.debug(msg)
 
     splitted_data_RR, initial_times = dp.time_initialization(splitted_data_RR) # splitted_data_RR (list of np.array): 
@@ -153,7 +151,11 @@ if __name__ == '__main__':
 
     GIDN_features = fea.get_features_matrix(splitted_pulse_features) # (np.array) [chunks * features]
 
-    sample_info = {'output_names': output_names, 'pulse_features_names': pulse_features_params}
+    sample_info = { 'Objective classes names': objective_classes_names, 
+                    'Filtering params': RR_filtering_params,
+                    'Features params': pulse_features_params,
+                    'Features names': pulse_features_names#!!!
+                  }
 
     X[GIDN] = GIDN_features
     y[GIDN] = GIDN_y
@@ -181,9 +183,10 @@ if __name__ == '__main__':
     
   ### Prepare training / test samples ##########
 
-  train_GIDNS, test_GIDNS, info = dp.split_GIDNS_for_test(loaded_GIDNS, TEST_PARTITION, 
+  train_GIDNS, test_GIDNS, partition_info = dp.split_GIDNS_for_test(loaded_GIDNS, TEST_PARTITION, 
                                                             TEST_PORTION)
-  logging.info('%s test/train splitting: %s'%(TEST_PARTITION, info))
+  logging.info('%s test/train splitting: %s'%(TEST_PARTITION, partition_info))
+
 
   def combine_splitted_dict(d, GIDNS):
     combined = [d[GIDN] for GIDN in GIDNS]
@@ -195,17 +198,11 @@ if __name__ == '__main__':
   testY = combine_splitted_dict(y, test_GIDNS)
   su.check_memory()
 
-  logging.warning('trainX: %s examples, %s features'%trainX.shape)
-  logging.warning('trainY: %s examples, %s objectives'%trainY.shape)
-  logging.warning('testX: %s examples, %s features'%testX.shape)
-  logging.warning('testY: %s examples, %s objectives'%testY.shape)
-  test_examples_percentage = 100.0 * float(testX.shape[0]) / (trainX.shape[0]+testX.shape[0])
-  logging.warning('Test examples percentage: %.1f%%'%test_examples_percentage)
-
+  dp.training_stats(trainX, trainY, testX, testY)
 
   path = dl.save_hdf5_sample(sample_name, sample_info, trainX, trainY, testX, testY)
   logging.info('Training and test samples are saved in hdf5 format: '+path)
   
   su.check_memory(verbose=True)
-  logging.info('Data processing is finished')
+  logging.info('Data preparation is finished')
   

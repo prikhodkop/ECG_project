@@ -36,18 +36,18 @@ if __name__ == '__main__':
   USED_EXAMPLES_NUMBER = None # 'None' means that all examples are used; otherwise randomly selected
 
   #!!!
-  OBJECTIVE_NAME = 'Sex' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval' #!!!!
-  sample_name = OBJECTIVE_NAME + '_1' # train-test filename
+  OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval' #!!!!
+  sample_name = OBJECTIVE_NAME + '_2' # train-test filename
   SEED = 0
 
 
   classifiers = [
       ("Dummy", DummyClassifier(strategy='stratified')), # see http://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html
-      ("Nearest Neighbors", KNeighborsClassifier(3)),
       # ("Linear SVM", SVC(kernel="linear", C=0.025)),
       # ("RBF SVM", SVC(gamma=2, C=1)),
       # ("Decision Tree", DecisionTreeClassifier(max_depth=5)),
-       ("Random Forest", RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1)),
+      ("Random Forest", RandomForestClassifier(n_estimators=100)),
+      ("Nearest Neighbors", KNeighborsClassifier(3)),
       # ("AdaBoost", AdaBoostClassifier()),
       ("Naive Bayes", GaussianNB())
       ] # TODO: xgboost
@@ -67,6 +67,7 @@ if __name__ == '__main__':
     trainY = trainY[idx]
 
   dp.training_stats(trainX, trainY, testX, testY)
+  logging.info('Sample info:\n%s'%sample_info)
   logging.info('Standartization of training and test samples.')
   scaler = preprocessing.StandardScaler().fit(trainX)
   trainX = scaler.transform(trainX) 
@@ -78,9 +79,11 @@ if __name__ == '__main__':
     testY = testY.ravel()
 
   for name, clf in classifiers:
-    logging.info('Algorithm: %s'%name)
+    logging.info('Algorithm: ====================== %s =========================='%name)
+    logging.info('Features names: %s'%sample_info['Features names'])
     clf.fit(trainX, trainY)
     mu.analyse_results(clf, testX, testY)
+    logging.info('Objective classes names: %s'%sample_info['Objective classes names']) 
     clfs[name] = clf
   
   models_name = conf.path_to_models + 'clfs_' + sample_name + '.pickle'

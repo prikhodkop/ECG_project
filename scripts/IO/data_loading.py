@@ -4,6 +4,7 @@ import os
 import logging
 import pandas as pd
 import h5py
+import pickle
 
 import sys
 sys.path.append('..') #!!!
@@ -120,25 +121,33 @@ def get_GIDNS(path_to_dta):
 def save_hdf5_sample(sample_name, sample_info, trainX, trainY, testX, testY):
   hdf5_filename = conf.path_to_sample+sample_name+'.h5'
   h5f = h5py.File(hdf5_filename, 'w')
-  h5f.create_dataset('info', data=sample_info)
   h5f.create_dataset('trainX', data=trainX)
   h5f.create_dataset('trainY', data=trainY)
   h5f.create_dataset('testX', data=testX)
   h5f.create_dataset('testY', data=testY)
   h5f.close()
+
+  picke_filename = conf.path_to_sample+sample_name+'.pkl'
+  with open(picke_filename, 'wb') as f:
+    pickle.dump(sample_info, f)
+
   return hdf5_filename
 
 def load_hdf5_sample(sample_name):
   hdf5_filename = conf.path_to_sample+sample_name+'.h5'
   
   h5f = h5py.File(hdf5_filename,'r')
-  output_names = h5f['output_names'][:]
   trainX = h5f['trainX'][:]
   trainY = h5f['trainY'][:]
   testX = h5f['testX'][:]
   testY = h5f['testY'][:]
+  h5f.close()
+  
+  picke_filename = conf.path_to_sample+sample_name+'.pkl'
+  with open(picke_filename, 'rb') as f:
+    sample_info = pickle.load(f)
+  sample_info['path'] = hdf5_filename
 
-  sample_info = {'path': hdf5_filename, 'info': h5f['testY'][:]}
   return trainX, trainY, testX, testY, sample_info
 
 

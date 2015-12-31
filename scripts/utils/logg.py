@@ -3,17 +3,6 @@ import os
 import time
 
 
-def console_logger(level=logging.DEBUG):
-  # create console handler and set level to info
-  logger = logging.getLogger()
-  handler = logging.StreamHandler()
-  
-  handler.setLevel(level)
-  #formatter = logging.Formatter("%(levelname)s - %(message)s")
-  formatter = logging.Formatter("%(levelname)-8s [%(asctime)s] %(message)s")
-  handler.setFormatter(formatter)
-  logger.addHandler(handler)
-
 
 def configure_logging(console_level=logging.INFO, output_dir='../logs/'):
   # Levels: debug, info, warning, error, critical
@@ -21,8 +10,15 @@ def configure_logging(console_level=logging.INFO, output_dir='../logs/'):
   logger = logging.getLogger()
   logger.setLevel(logging.DEBUG)
 
-  console_logger(level=console_level)
-   
+  handler = logging.StreamHandler()
+  
+  handler.setLevel(console_level)
+  #formatter = logging.Formatter("%(levelname)s - %(message)s")
+  formatter = logging.Formatter("%(levelname)-8s [%(asctime)s] %(message)s")
+  handler.setFormatter(formatter)
+  logger.addHandler(handler)
+
+
   current_datetime = time.strftime("%Y-%m-%d %H-%M-%S")
   # create error file handler and set level to error
 

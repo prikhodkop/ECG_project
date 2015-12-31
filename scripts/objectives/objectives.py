@@ -19,14 +19,19 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
     GIDN (int): unique identifier of the patient
 
   Returns
-    y (np.array of floats): objective, e.g. sex, age, sleep status
+    1) y (np.array of floats): objective, e.g. sex, age, sleep status
+    objective_classes_names (dict)
+
+    or
+
+    2) None, None if objective is not available 
   """
 
   if OBJECTIVE_NAME == 'cl_sleep_interval':
-    output_names, y = get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN)
+    y, objective_classes_names = get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN)
 
   elif OBJECTIVE_NAME in ['Sex', 'BMIgr']: #TODO
-    output_names, y = get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN)
+    y, objective_classes_names = get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN)
 
   else:
     msg = 'Not implemented objective type' #TODO
@@ -34,9 +39,9 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
     raise Exception(msg)
 
   if y is None:
-    return None
+    return None, None
   else:
-    return output_names, np.array([y]).T
+    return np.array([y]).T, objective_classes_names
 
 
 def get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
@@ -47,7 +52,8 @@ def get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
   obj_value = float(pp[pp['GIDN']==GIDN][OBJECTIVE_NAME])   
   y = [obj_value for i in xrange(number_of_chunks)]
   # TODO !!!
-  return None, y
+  #!!! what if not available?
+  return y, None
 
 
 
@@ -73,8 +79,8 @@ def get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN):
       else:
         y.append(0.0)
     
-    output_dict = {1:'sleep', 0:'awake'}
-    return y, output_dict
+    objective_classes_names = {1.0:'sleep', 0.0:'awake'}
+    return y, objective_classes_names
 
 
 

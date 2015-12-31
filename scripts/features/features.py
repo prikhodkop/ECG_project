@@ -3,7 +3,11 @@ import numpy as np
 import logging
 import scipy.signal as sg
 from scipy.stats import linregress
-import triangulation as tg
+
+try: 
+  import triangulation as tg
+except Exception as e:
+  logging.warning(e)
 
 def get_default_pulse_features_params():
   """
@@ -12,13 +16,14 @@ def get_default_pulse_features_params():
   """
   options =  {'time features':      { 'autocorr step': [5, 20], # in beats???
                                       'step': [5, 20],
-                                      'bounds': [20, 50]
+                                      'bounds': [20, 50],
+                                      'triangular': None
                                     },     
 
               'frequency features': {'frequency bounds': [0, 0.0033, 0.04, 0.15, 0.5] # Hz
                                     },
 
-              'nonlinear features': 'default' # e.g. 'default' or None
+              'nonlinear features': None # e.g. 'default' or None
              }
 
   return options
@@ -51,9 +56,9 @@ def generate_pulse_features(splitted_data_RR, features_params):
       features_names += time_features_names
 
     if features_params['frequency features'] is not None:
-      features, features_names = calculate_frequency_features(data_RR, features_params['frequency features'])
-      data_RR_features += features
-      features_names += features_names
+      frequency_features, features_features_names = calculate_frequency_features(data_RR, features_params['frequency features'])
+      data_RR_features += frequency_features
+      features_names += features_features_names
 
     if features_params['nonlinear features'] is not None:
       nonlinear_features, nonlinear_features_names = calculate_nonlinear_features(data_RR, features_params['nonlinear features'])
@@ -131,10 +136,11 @@ def calculate_time_features(data_RR, time_options):
       features.append(['stdstdA' + str(step) + 'NN', np.std(std_intervals)])
       features.append(['meanA' + str(step) + 'HR', np.std(hr_intervals)])
   
-  M, N, S = tg.apply_grad_descent(intervals)
-  h = 2. / (M + N)
-  features.append(['HRVti', intervals.shape[0] / 2. * (M + N)])
-  features.append(['TINN', M - N])
+  if time_options['triangular'] is not None:
+    M, N, S = tg.apply_grad_descent(intervals)
+    h = 2. / (M + N)
+    features.append(['HRVti', intervals.shape[0] / 2. * (M + N)])
+    features.append(['TINN', M - N])
 
 
   time_features_names, time_features = zip(*features)
