@@ -23,10 +23,10 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
   """
 
   if OBJECTIVE_NAME == 'cl_sleep_interval':
-    y = get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN)
+    output_names, y = get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN)
 
   elif OBJECTIVE_NAME in ['Sex', 'BMIgr']: #TODO
-    y = get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN)
+    output_names, y = get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN)
 
   else:
     msg = 'Not implemented objective type' #TODO
@@ -36,7 +36,7 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
   if y is None:
     return None
   else:
-    return np.array([y]).T
+    return output_names, np.array([y]).T
 
 
 def get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
@@ -46,7 +46,8 @@ def get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
   
   obj_value = float(pp[pp['GIDN']==GIDN][OBJECTIVE_NAME])   
   y = [obj_value for i in xrange(number_of_chunks)]
-  return y
+  # TODO !!!
+  return None, y
 
 
 
@@ -58,7 +59,7 @@ def get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN):
   sleep = stat_info['sleep'] # from .dta file
 
   if not (GIDN in sleep['start'].keys()):
-    return None
+    return None, None
   else:
     start_sleep = sleep['start'][GIDN]
     end_sleep = sleep['end'][GIDN]
@@ -72,7 +73,8 @@ def get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN):
       else:
         y.append(0.0)
     
-    return y
+    output_dict = {1:'sleep', 0:'awake'}
+    return y, output_dict
 
 
 

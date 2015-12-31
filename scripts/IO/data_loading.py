@@ -117,9 +117,10 @@ def get_GIDNS(path_to_dta):
   return GIDNS
 
 
-def save_hdf5_sample(sample_name, trainX, trainY, testX, testY):
+def save_hdf5_sample(sample_name, sample_info, trainX, trainY, testX, testY):
   hdf5_filename = conf.path_to_sample+sample_name+'.h5'
   h5f = h5py.File(hdf5_filename, 'w')
+  h5f.create_dataset('info', data=sample_info)
   h5f.create_dataset('trainX', data=trainX)
   h5f.create_dataset('trainY', data=trainY)
   h5f.create_dataset('testX', data=testX)
@@ -131,12 +132,13 @@ def load_hdf5_sample(sample_name):
   hdf5_filename = conf.path_to_sample+sample_name+'.h5'
   
   h5f = h5py.File(hdf5_filename,'r')
+  output_names = h5f['output_names'][:]
   trainX = h5f['trainX'][:]
   trainY = h5f['trainY'][:]
   testX = h5f['testX'][:]
   testY = h5f['testY'][:]
 
-  sample_info = {'path': hdf5_filename}
+  sample_info = {'path': hdf5_filename, 'info': h5f['testY'][:]}
   return trainX, trainY, testX, testY, sample_info
 
 

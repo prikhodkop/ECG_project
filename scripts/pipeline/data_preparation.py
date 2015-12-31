@@ -135,7 +135,7 @@ if __name__ == '__main__':
       continue
     logging.debug('Splitting intervals')
     
-    GIDN_y = obj.generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN) # np.array of objective values (float)
+    GIDN_y, output_names = obj.generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN) # np.array of objective values (float)
     if GIDN_y is None:
       objective_problem_patients.append(GIDN)
       continue
@@ -152,6 +152,8 @@ if __name__ == '__main__':
     stat_features = fea.get_stat_features(stat_features_names, stat_info, GIDN) #TODO
 
     GIDN_features = fea.get_features_matrix(splitted_pulse_features) # (np.array) [chunks * features]
+
+    sample_info = {'output_names': output_names, 'pulse_features_names': pulse_features_params}
 
     X[GIDN] = GIDN_features
     y[GIDN] = GIDN_y
@@ -201,7 +203,7 @@ if __name__ == '__main__':
   logging.warning('Test examples percentage: %.1f%%'%test_examples_percentage)
 
 
-  path = dl.save_hdf5_sample(sample_name, trainX, trainY, testX, testY)
+  path = dl.save_hdf5_sample(sample_name, sample_info, trainX, trainY, testX, testY)
   logging.info('Training and test samples are saved in hdf5 format: '+path)
   
   su.check_memory(verbose=True)
