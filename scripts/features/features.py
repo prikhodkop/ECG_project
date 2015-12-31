@@ -3,6 +3,7 @@ import numpy as np
 import logging
 import scipy.signal as sg
 from scipy.stats import linregress
+import triangulation as tg
 
 def get_default_pulse_features_params():
   """
@@ -17,7 +18,7 @@ def get_default_pulse_features_params():
               'frequency features': {'frequency bounds': [0, 0.0033, 0.04, 0.15, 0.5] # Hz
                                     },
 
-              'nonlinear features': None#'default' # e.g. 'default' or None
+              'nonlinear features': 'default' # e.g. 'default' or None
              }
 
   return options
@@ -129,6 +130,12 @@ def calculate_time_features(data_RR, time_options):
       features.append(['meanstdA' + str(step) + 'NN', np.mean(std_intervals)])
       features.append(['stdstdA' + str(step) + 'NN', np.std(std_intervals)])
       features.append(['meanA' + str(step) + 'HR', np.std(hr_intervals)])
+  
+  M, N, S = tg.apply_grad_descent(intervals)
+  h = 2. / (M + N)
+  features.append(['HRVti', intervals.shape[0] / 2. * (M + N)])
+  features.append(['TINN', M - N])
+
 
   time_features_names, time_features = zip(*features)
   return list(time_features), list(time_features_names)
