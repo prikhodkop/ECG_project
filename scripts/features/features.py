@@ -17,13 +17,13 @@ def get_default_pulse_features_params():
   options =  {'time features':      { 'autocorr step': [5, 20], # in beats???
                                       'step': [5, 20],
                                       'bounds': [20, 50],
-                                      'triangular': None
+                                      'triangular': True
                                     },     
 
-              'frequency features': {'frequency bounds': [0, 0.0033, 0.04, 0.15, 0.5] # Hz
+              'frequency features': {'frequency bounds': [0, 0.0033, 0.04, 0.15, 0.4] # Hz
                                     },
 
-              'nonlinear features': None # e.g. 'default' or None
+              'nonlinear features': 'default' # e.g. 'default' or None
              }
 
   return options
@@ -104,18 +104,12 @@ def calculate_time_features(data_RR, time_options):
 
 
   if time_options['bounds']:
-    if not (type(time_options['bounds']) == list or type(time_options['bounds']) == np.ndarray):
-      time_options['bounds'] = [time_options['bounds']]
-
     for bound in time_options['bounds']:
       features.append(['pNN' + str(bound), intervals[:-1][np.fabs(intervals[1:] - intervals[:-1]) > bound].shape[0] / float(intervals.shape[0] - 1)])
 
 
   # Calculate statistics for averaged data
   if time_options['step']: 
-    if not (type(time_options['step']) == list or type(time_options['step']) == np.ndarray):
-      time_options['step'] = [time_options['step']]
-
     for step in time_options['step']:
       mean_intervals = []
       std_intervals = []
@@ -167,21 +161,20 @@ def calculate_frequency_features(data_RR, frequency_options):
 
   f = np.linspace(0.001, 0.5, 100)
   pgram = sg.lombscargle(times/1000, intervals/1000, f)
-  power = np.sum(pgram)
+  power = np.mean(pgram) * (frequency_bounds[-1] - frequency_bounds[0])])
 
-  normalized_power = power - pgram[1]
   bounds_names = ['ULF', 'VLF', 'LF', 'HF']
   frequency_bounds = frequency_options['frequency bounds']
 
   for i in xrange(len(frequency_bounds) - 1):
     idx = (f > frequency_bounds[i]) * (f <= frequency_bounds[i+1])
-    features.append([bounds_names[i], np.sum(pgram[idx]) / pgram[idx].shape[0] * (frequency_bounds[i+1] - frequency_bounds[i])])
+    features.append([bounds_names[i], np.mean(pgram[idx]) * (frequency_bounds[i+1] - frequency_bounds[i])])
     features.append([bounds_names[i] + 'rel', np.sum(pgram[idx]) / power])
     features.append([bounds_names[i] + 'peak', f[idx][np.argmax(pgram[idx])]])
     if i > 1:
-      features.append([bounds_names[i] + 'normalized', np.sum(pgram[idx]) / normalized_power])
+      features.append([bounds_names[i] + 'normalized', np.sum(pgram[idx]) / (power - features[3][1]))]) #features[3][1] is VLF 
 
-  features.append(['HF/LF', pgram[3] / pgram[2]])
+  features.append(['LF/HF', pgram[2] / pgram[3]])
 
   frequency_features_names, frequency_features = zip(*features)
   return list(frequency_features), list(frequency_features_names)
