@@ -116,14 +116,16 @@ def calculate_time_features(data_RR, time_options):
       fabs_intervals = []
       hr_intervals = []
       last_step = step
-      i = 0
-      while i < intervals.shape[0]:
-        if i > intervals.shape[0] - last_step:
-          last_step = intervals.shape[0] - i
-        mean_intervals.append(np.mean(intervals[i:i+last_step]))
-        std_intervals.append(np.std(intervals[i:i+last_step]))
-        hr_intervals.append(np.mean(60000. / intervals[i:i+last_step]))
-        i = i + last_step
+
+      for i in xrange(0, intervals.shape[0], step):
+
+      # i = 0
+      # while i < intervals.shape[0]:
+      #   if i > intervals.shape[0] - last_step:
+      #     last_step = intervals.shape[0] - i
+        mean_intervals.append(np.mean(intervals[i:i+step]))
+        std_intervals.append(np.std(intervals[i:i+step]))
+        hr_intervals.append(np.mean(60000. / intervals[i:i+step]))
       # np.mean(mean_x) = np.mean(x) and just exists in features
       features.append(['meanmeanA' + str(step) + 'NN', np.std(mean_intervals)])
       features.append(['meanstdA' + str(step) + 'NN', np.mean(std_intervals)])
@@ -161,10 +163,10 @@ def calculate_frequency_features(data_RR, frequency_options):
 
   f = np.linspace(0.001, 0.5, 100)
   pgram = sg.lombscargle(times/1000, intervals/1000, f)
-  power = np.mean(pgram) * (frequency_bounds[-1] - frequency_bounds[0])
 
   bounds_names = ['ULF', 'VLF', 'LF', 'HF']
   frequency_bounds = frequency_options['frequency bounds']
+  power = np.mean(pgram) * (frequency_bounds[-1] - frequency_bounds[0])
 
   for i in xrange(len(frequency_bounds) - 1):
     idx = (f > frequency_bounds[i]) * (f <= frequency_bounds[i+1])

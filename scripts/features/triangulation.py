@@ -1,9 +1,8 @@
-from matplotlib import pyplot as pt
 import numpy as np
 from scipy.stats import triang
 from scipy.stats import linregress 
 
-import sampen
+#import sampen
 
 def q(x, M, N, S):
   ''' triangle distribution in the point x with numeric parameters M, N, S '''
