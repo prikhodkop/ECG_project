@@ -161,7 +161,7 @@ def calculate_frequency_features(data_RR, frequency_options):
 
   f = np.linspace(0.001, 0.5, 100)
   pgram = sg.lombscargle(times/1000, intervals/1000, f)
-  power = np.mean(pgram) * (frequency_bounds[-1] - frequency_bounds[0])])
+  power = np.mean(pgram) * (frequency_bounds[-1] - frequency_bounds[0])
 
   bounds_names = ['ULF', 'VLF', 'LF', 'HF']
   frequency_bounds = frequency_options['frequency bounds']
@@ -172,7 +172,7 @@ def calculate_frequency_features(data_RR, frequency_options):
     features.append([bounds_names[i] + 'rel', np.sum(pgram[idx]) / power])
     features.append([bounds_names[i] + 'peak', f[idx][np.argmax(pgram[idx])]])
     if i > 1:
-      features.append([bounds_names[i] + 'normalized', np.sum(pgram[idx]) / (power - features[3][1]))]) #features[3][1] is VLF 
+      features.append([bounds_names[i] + 'normalized', np.sum(pgram[idx]) / (power - features[3][1])]) #features[3][1] is VLF and is already calculated
 
   features.append(['LF/HF', pgram[2] / pgram[3]])
 
