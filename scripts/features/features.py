@@ -3,6 +3,7 @@ import numpy as np
 import logging
 import scipy.signal as sg
 from scipy.stats import linregress
+import pandas as pd
 
 try: 
   import triangulation as tg
@@ -14,9 +15,9 @@ def get_default_pulse_features_params():
   Return dict of default pulse features parameters
   'None' means no actions
   """
-  options =  {'time features':      { 'autocorr step': [5, 20], # in beats???
-                                      'step': [5, 20],
-                                      'bounds': [20, 50],
+  options =  {'time features':      { 'step': [60000], #ms
+                                      'step_for_hr': [600000], #ms
+                                      'bounds': [20, 50], #ms
                                       'triangular': True
                                     },     
 
@@ -75,6 +76,7 @@ def calculate_time_features(data_RR, time_options):
   """
   Calculate time-based features for given chunk of pulse.
   Only intervals lengths are considered. 
+  See Murukesan14 for feature description.
 
   Args
     data_RR (np.array of np.int64): data in format (time [ms], interval [ms])
@@ -88,59 +90,53 @@ def calculate_time_features(data_RR, time_options):
   times = data_RR[:, 0].copy().astype(float)
   intervals = data_RR[:, 1].copy().astype(float)
 
-  features = []  
-  features.append(['meanNN', np.mean(intervals)])
-  features.append(['minNN', np.min(intervals)])
-  features.append(['maxNN', np.max(intervals)])
-  features.append(['medianNN', np.median(intervals)])
-  features.append(['stdNN', np.std(intervals)])
-  features.append(['meanfabsSD', np.mean(np.fabs(intervals[1:] - intervals[:-1]))])
-  features.append(['stdSD', np.std(np.fabs(intervals[1:] - intervals[:-1]))])
-  features.append(['meanHR', np.mean(60000. / intervals)])
-  features.append(['stdHR', np.std(60000. / intervals)])
+  features = pd.Series() 
 
-  diffs = intervals[1:] / intervals[:-1]
-  features.append(['outliers20', diffs[np.fabs(diffs - 1) > 0.2].shape[0] / float(diffs.shape[0])])
+  features.set_value('maxNN', np.max(intervals))
+  features.set_value('minNN', np.min(intervals))
+  features.set_value('meanNN', np.mean(intervals))
+  features.set_value('medianNN', np.median(intervals))
+  features.set_value('SDNN', np.std(intervals))
 
-
-  if time_options['bounds']:
-    for bound in time_options['bounds']:
-      features.append(['pNN' + str(bound), intervals[:-1][np.fabs(intervals[1:] - intervals[:-1]) > bound].shape[0] / float(intervals.shape[0] - 1)])
-
-
-  # Calculate statistics for averaged data
   if time_options['step']: 
     for step in time_options['step']:
       mean_intervals = []
       std_intervals = []
-      fabs_intervals = []
-      hr_intervals = []
-      last_step = step
+      for i in xrange(0, int(times[-1]), step):
+        mean_intervals.append(np.mean(intervals[(i < times) * (times < i + step)]))
+        std_intervals.append(np.std(intervals[(i < times) * (times < i + step)]))
+      features.set_value('SDA' + str(step) + 'NN', np.std(mean_intervals))
+      features.set_value('SD' + str(step) + 'NNind', np.mean(std_intervals))
 
-      for i in xrange(0, intervals.shape[0], step):
-
-      # i = 0
-      # while i < intervals.shape[0]:
-      #   if i > intervals.shape[0] - last_step:
-      #     last_step = intervals.shape[0] - i
-        mean_intervals.append(np.mean(intervals[i:i+step]))
-        std_intervals.append(np.std(intervals[i:i+step]))
-        hr_intervals.append(np.mean(60000. / intervals[i:i+step]))
-      # np.mean(mean_x) = np.mean(x) and just exists in features
-      features.append(['meanmeanA' + str(step) + 'NN', np.std(mean_intervals)])
-      features.append(['meanstdA' + str(step) + 'NN', np.mean(std_intervals)])
-      features.append(['stdstdA' + str(step) + 'NN', np.std(std_intervals)])
-      features.append(['meanA' + str(step) + 'HR', np.std(hr_intervals)])
+  diff = intervals[1:] - intervals[:-1]
+  if time_options['bounds']:
+    for bound in time_options['bounds']:
+      features.set_value('NN' + str(bound), np.sum(np.fabs(diff) > bound))
+      features.set_value('pNN' + str(bound), features['NN' + str(bound)] / float(intervals.shape[0] - 1))
   
+  features.set_value('RMSSD', np.mean(np.power(diff, 2)) ** 0.5)
+  features.set_value('MeanHR', np.mean(60000. / intervals))
+
+  if time_options['step_for_hr']: 
+    for step in time_options['step_for_hr']:
+      mean_intervals = []
+      for i in xrange(0, int(times[-1]), step):
+        mean_intervals.append(np.mean(60000. / intervals[(i < times) * (times < i + step)]))
+      features.set_value('sd' + str(step) + 'HR', np.std(mean_intervals))
+  
+  # this part is not ready yet (?)
   if time_options['triangular'] is not None:
     M, N, S = tg.apply_grad_descent(intervals)
     h = 2. / (M + N)
-    features.append(['HRVti', intervals.shape[0] / 2. * (M + N)])
-    features.append(['TINN', M - N])
+    features.set_value('HRVti', intervals.shape[0] / 2. * (M + N))
+    features.set_value('TINN', M - N)
 
+  # extra features, which are not from papers
+  features.set_value('meanSD', np.mean(np.fabs(diff)))
+  features.set_value('stdSD', np.std(np.fabs(diff)))
+  features.set_value('outliers20', np.sum(np.fabs(intervals[1:]/intervals[:-1] - 1) > 0.2) / float(intervals.shape[0] - 1))
 
-  time_features_names, time_features = zip(*features)
-  return list(time_features), list(time_features_names)
+  return features
 
 
 def calculate_frequency_features(data_RR, frequency_options):
@@ -268,8 +264,6 @@ def get_features_matrix(splitted_pulse_features):
     raise Exception(msg)
 
   return pulse_features_matrix
-
-  
 
 if __name__ == '__main__':
   pass
