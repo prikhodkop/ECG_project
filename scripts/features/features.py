@@ -5,6 +5,9 @@ import scipy.signal as sg
 from scipy.stats import linregress
 import pandas as pd
 
+# #debug
+# import matplotlib.pyplot as plt
+
 try: 
   import triangulation as tg
 except Exception as e:
@@ -15,13 +18,15 @@ def get_default_pulse_features_params():
   Return dict of default pulse features parameters
   'None' means no actions
   """
-  options =  {'time features':      { 'step': [60000], #ms
+  options =  {'sampling rate':      1000, #hz
+              'time features':      { 'step': [60000], #ms
                                       'step_for_hr': [600000], #ms
                                       'bounds': [20, 50], #ms
                                       'triangular': True
                                     },     
 
-              'frequency features': {'frequency bounds': [0, 0.0033, 0.04, 0.15, 0.4] # Hz
+              'frequency features': { 'frequency bounds': [0., 0.0033, 0.04, 0.15, 0.4], # Hz
+                                      'frequency range': [0.001, 0.4, 100]
                                     },
 
               'nonlinear features': 'default' # e.g. 'default' or None
@@ -72,7 +77,7 @@ def generate_pulse_features(splitted_data_RR, features_params):
 
 
 
-def calculate_time_features(data_RR, time_options):
+def calculate_time_features(data_RR, time_options, sampling_rate):
   """
   Calculate time-based features for given chunk of pulse.
   Only intervals lengths are considered. 
@@ -115,13 +120,13 @@ def calculate_time_features(data_RR, time_options):
       features.set_value('pNN' + str(bound), features['NN' + str(bound)] / float(intervals.shape[0] - 1))
   
   features.set_value('RMSSD', np.mean(np.power(diff, 2)) ** 0.5)
-  features.set_value('MeanHR', np.mean(60000. / intervals))
+  features.set_value('MeanHR', np.mean(60. * sampling_rate / intervals))
 
   if time_options['step_for_hr']: 
     for step in time_options['step_for_hr']:
       mean_intervals = []
       for i in xrange(0, int(times[-1]), step):
-        mean_intervals.append(np.mean(60000. / intervals[(i < times) * (times < i + step)]))
+        mean_intervals.append(np.mean(60. * sampling_rate / intervals[(i < times) * (times < i + step)]))
       features.set_value('sd' + str(step) + 'HR', np.std(mean_intervals))
   
   # this part is not ready yet (?)
@@ -139,7 +144,7 @@ def calculate_time_features(data_RR, time_options):
   return features
 
 
-def calculate_frequency_features(data_RR, frequency_options):
+def calculate_frequency_features(data_RR, frequency_options, sampling_rate):
   """
   Calculate frequency-based features for given chunk of pulse.
 
@@ -155,27 +160,35 @@ def calculate_frequency_features(data_RR, frequency_options):
   times = data_RR[:, 0].copy().astype(float)
   intervals = data_RR[:, 1].copy().astype(float)
 
-  features = []
+  features = pd.Series() 
 
-  f = np.linspace(0.001, 0.5, 100)
-  pgram = sg.lombscargle(times/1000, intervals/1000, f)
+  frequency_range = frequency_options['frequency range'][1] - frequency_options['frequency range'][0]
+  f =  np.linspace(frequency_options['frequency range'][0], frequency_options['frequency range'][1], frequency_options['frequency range'][2])
+  pgram = sg.lombscargle(times/sampling_rate, intervals, f)
 
   bounds_names = ['ULF', 'VLF', 'LF', 'HF']
   frequency_bounds = frequency_options['frequency bounds']
-  power = np.mean(pgram) * (frequency_bounds[-1] - frequency_bounds[0])
+  totalpower = np.mean(pgram) * frequency_range
 
-  for i in xrange(len(frequency_bounds) - 1):
-    idx = (f > frequency_bounds[i]) * (f <= frequency_bounds[i+1])
-    features.append([bounds_names[i], np.mean(pgram[idx]) * (frequency_bounds[i+1] - frequency_bounds[i])])
-    features.append([bounds_names[i] + 'rel', np.sum(pgram[idx]) / power])
-    features.append([bounds_names[i] + 'peak', f[idx][np.argmax(pgram[idx])]])
-    if i > 1:
-      features.append([bounds_names[i] + 'normalized', np.sum(pgram[idx]) / (power - features[3][1])]) #features[3][1] is VLF and is already calculated
+  idx = {}
+  for i in xrange(1, len(frequency_bounds)-1):
+    idx[bounds_names[i]] = (f > frequency_bounds[i]) * (f <= frequency_bounds[i+1])
+    features.set_value('a' + bounds_names[i], np.mean(pgram[idx[bounds_names[i]]]) * frequency_range)
 
-  features.append(['LF/HF', pgram[2] / pgram[3]])
+  for i in xrange(1, len(frequency_bounds)-1):
+    features.set_value('peak' + bounds_names[i], f[idx[bounds_names[i]]][np.argmax(pgram[idx[bounds_names[i]]])])
 
-  frequency_features_names, frequency_features = zip(*features)
-  return list(frequency_features), list(frequency_features_names)
+  features.set_value('aTotal', features['aVLF'] + features['aLF'] + features['aHF'])
+
+  for i in xrange(1, len(frequency_bounds)-1):
+    features.set_value('p' + bounds_names[i], features['a' + bounds_names[i]] / totalpower)
+  
+  for i in xrange(2, len(frequency_bounds)-1):
+      features.set_value('n' + bounds_names[i], features['a' + bounds_names[i]] / (totalpower - features['aVLF']))
+
+  features.set_value('LF/HF', features['aLF'] / features['aHF'])
+
+  return features
 
 
 
@@ -265,6 +278,54 @@ def get_features_matrix(splitted_pulse_features):
 
   return pulse_features_matrix
 
-if __name__ == '__main__':
-  pass
+# if __name__ == '__main__':
+#   pass
 
+# #debug
+# def read_rr_file(file_name, start, finish):
+#   # read rr file and return array of peak coordinates
+
+#   print 'reading rr file'
+
+#   f = open(file_name, 'r')
+#   f.readline()
+#   f.readline()
+#   ans = []
+#   temp = 1
+  
+#   if finish != None:
+#     for s in f:
+#       if temp != 0:
+#         coordinate = [int(s.strip().split()[0]), int(s.strip().split()[1])]
+#         if coordinate[0] != 0 and coordinate[0] < finish and coordinate[0] >= start and coordinate[1] != 0:
+#           ans.append(coordinate)
+#         elif coordinate[0] == 0:
+#           temp = 0
+#       else:
+#         temp = 1
+  
+#   else:
+#     for s in f:
+#       if temp != 0:
+#         coordinate = [int(s.strip().split()[0]), int(s.strip().split()[1])]
+#         if coordinate[0] != 0 and coordinate[0] >= start and coordinate[1] != 0:
+#           ans.append(coordinate)
+#         elif coordinate[0] == 0:
+#           temp = 0
+#       else:
+#         temp = 1
+  
+#   f.close()
+
+#   return np.array(ans)
+
+if __name__ == '__main__':
+  
+  # # debug
+  # # frequency_features, frequency_features_names = calculate_frequency_features(read_rr_file('../../../../520307.rr', 0, None), get_default_pulse_features_params()['frequency features'])
+  # # for i in xrange(len(frequency_features_names)):
+  #   # print frequency_features_names[i], frequency_features[i]
+  # features = calculate_frequency_features(read_rr_file('../../../../../520307.rr', 0, None), get_default_pulse_features_params()['frequency features'], get_default_pulse_features_params()['sampling rate'])
+  # print features
+
+  pass
