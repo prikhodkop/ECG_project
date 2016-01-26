@@ -35,7 +35,6 @@ def get_default_pulse_features_params():
   return options
 
 
-
 def generate_pulse_features(splitted_data_RR, features_params):
   """
   Calculate features related to pulse chunks:
@@ -74,7 +73,6 @@ def generate_pulse_features(splitted_data_RR, features_params):
     splitted_features.append(np.array(data_RR_features)) #!!!
 
   return splitted_features, features_names
-
 
 
 def calculate_time_features(data_RR, time_options, sampling_rate):
@@ -191,7 +189,6 @@ def calculate_frequency_features(data_RR, frequency_options, sampling_rate):
   return features
 
 
-
 def calculate_nonlinear_features(data_RR, nonlinear_options):
   """
   Calculate nonlinear features for given chunk of pulse.
@@ -207,20 +204,35 @@ def calculate_nonlinear_features(data_RR, nonlinear_options):
 
   intervals = data_RR[:, 1].copy().astype(float)
 
-  features = []
+  features = pd.Series()
   # Poincare plot
   k, b, _, _, _ = linregress(intervals[:-1], intervals[1:])
-  def line(x, slope, intercept):
-    return slope * x + intercept
 
-  k_ = -1. / k
-  b_ = b + np.mean(intervals) * (k + 1. / k)
+  # plt.plot(intervals[:-1], k * intervals[:-1] + b, c='b')
+  # plt.scatter(intervals[:-1], intervals[1:], alpha=0.2, s=4)
+  # plt.show()
 
-  projections1 = (intervals[1:] - line(intervals[:-1], k, b)) * k / np.sqrt(1. + k**2)
-  projections2 = (intervals[1:] - line(intervals[:-1], k_, b_)) * k_ / np.sqrt(1. + k_**2)
+  # k_ = -1. / k
+  # b_ = b + np.mean(intervals[:-1]) * (k + 1. / k)
+
+  # projections1 = np.array(intervals[1:].shape[0], 2)
+  x_mean = np.mean(intervals[:-1])
+  y_mean = np.mean(intervals[1:])
+  projections1 = (((intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k) - x_mean) ** 2 + ((intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k) - y_mean) ** 2) ** 0.5
+
+  # plt.scatter((intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k), (intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k), alpha=0.1, c='g')
+  # plt.show()
+
+  k = -1. / k
+  b = -np.mean(intervals[:-1]) * (k + 1. / k)
+
+  projections2 = (((intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k) - x_mean) ** 2 + ((intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k) - y_mean) ** 2) ** 0.5
+  # plt.scatter((intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k), (intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k), alpha=0.1, c='r')
+  # plt.show()
   
-  features.append(['poincSD1', np.std(projections1)])
-  features.append(['poincSD2', np.std(projections2)])
+
+  features.set_value('poincSD1', np.std(projections1))
+  features.set_value('poincSD2', np.std(projections2))
 
   w = np.zeros(intervals.shape[0])
   mi = np.mean(intervals)
@@ -240,12 +252,11 @@ def calculate_nonlinear_features(data_RR, nonlinear_options):
   alpha0 = linregress(np.log(ls[:l0])/np.log(10), np.log(fl[:l0])/np.log(10))[0]      
   alpha1 = linregress(np.log(ls[l0:])/np.log(10), np.log(fl[l0:])/np.log(10))[0]
 
-  features.append(['alpha0', alpha0])
-  features.append(['alpha1', alpha1])
-  features.append(['alphadiff', alpha1 - alpha0])
+  features.set_value('alpha0', alpha0)
+  features.set_value('alpha1', alpha1)
+  features.set_value('alphadiff', alpha1 - alpha0)
   
-  nonlinear_features_names, nonlinear_features = zip(*features)
-  return list(nonlinear_features), list(nonlinear_features_names)
+  return features
 
 
 def get_stat_features(stat_features_names, stat_info, GIDN):
@@ -278,8 +289,8 @@ def get_features_matrix(splitted_pulse_features):
 
   return pulse_features_matrix
 
-# if __name__ == '__main__':
-#   pass
+if __name__ == '__main__':
+  pass
 
 # #debug
 # def read_rr_file(file_name, start, finish):
@@ -319,13 +330,13 @@ def get_features_matrix(splitted_pulse_features):
 
 #   return np.array(ans)
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
   
-  # # debug
-  # # frequency_features, frequency_features_names = calculate_frequency_features(read_rr_file('../../../../520307.rr', 0, None), get_default_pulse_features_params()['frequency features'])
-  # # for i in xrange(len(frequency_features_names)):
-  #   # print frequency_features_names[i], frequency_features[i]
-  # features = calculate_frequency_features(read_rr_file('../../../../../520307.rr', 0, None), get_default_pulse_features_params()['frequency features'], get_default_pulse_features_params()['sampling rate'])
-  # print features
+#   # debug
+#   # frequency_features, frequency_features_names = calculate_frequency_features(read_rr_file('../../../../520307.rr', 0, None), get_default_pulse_features_params()['frequency features'])
+#   # for i in xrange(len(frequency_features_names)):
+#     # print frequency_features_names[i], frequency_features[i], get_default_pulse_features_params()['sampling rate']
+#   features = calculate_nonlinear_features(read_rr_file('../../../../../520307.rr', 0, None), get_default_pulse_features_params()['nonlinear features'])
+#   print features
 
-  pass
+#   pass
