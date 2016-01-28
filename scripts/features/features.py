@@ -4,9 +4,7 @@ import logging
 import scipy.signal as sg
 from scipy.stats import linregress
 import pandas as pd
-
-# #debug
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 try: 
   import triangulation as tg
@@ -18,18 +16,20 @@ def get_default_pulse_features_params():
   Return dict of default pulse features parameters
   'None' means no actions
   """
-  options =  {'sampling rate':      1000, #hz
+  options =  {'sampling rate':      1000, #Hz
+              'vizualization':      False,
               'time features':      { 'step': [60000], #ms
-                                      'step_for_hr': [600000], #ms
+                                      'step for hr': [600000], #ms
                                       'bounds': [20, 50], #ms
                                       'triangular': True
                                     },     
 
-              'frequency features': { 'frequency bounds': [0., 0.0033, 0.04, 0.15, 0.4], # Hz
+              'frequency features': { 'frequency bounds': [0., 0.0033, 0.04, 0.15, 0.4], #Hz
                                       'frequency range': [0.001, 0.4, 100]
                                     },
 
-              'nonlinear features': 'default' # e.g. 'default' or None
+              'nonlinear features': {'box lengths': [4, 6, 8, 10, 12, 14, 16, 20, 30, 60, 120, 180, 240, 300] #beats
+                                    } 
              }
 
   return options
@@ -121,7 +121,7 @@ def calculate_time_features(data_RR, time_options, sampling_rate):
   features.set_value('MeanHR', np.mean(60. * sampling_rate / intervals))
 
   if time_options['step_for_hr']: 
-    for step in time_options['step_for_hr']:
+    for step in time_options['step for hr']:
       mean_intervals = []
       for i in xrange(0, int(times[-1]), step):
         mean_intervals.append(np.mean(60. * sampling_rate / intervals[(i < times) * (times < i + step)]))
@@ -189,7 +189,7 @@ def calculate_frequency_features(data_RR, frequency_options, sampling_rate):
   return features
 
 
-def calculate_nonlinear_features(data_RR, nonlinear_options):
+def calculate_nonlinear_features(data_RR, options):
   """
   Calculate nonlinear features for given chunk of pulse.
 
@@ -201,60 +201,79 @@ def calculate_nonlinear_features(data_RR, nonlinear_options):
     features (list of float): calculated features for given pulse chunk
     features_names (list of str): features names in appropriate order 
   """
+  features = pd.Series()
+
+  box_lengths = np.array(options['nonlinear features']['box lengths'])
+  sampling_rate = options['sampling rate']
+  vizualization = options['vizualization']
+  # TODO add get_boolean
 
   intervals = data_RR[:, 1].copy().astype(float)
-
-  features = pd.Series()
+  time = np.sum(intervals) / sampling_rate
+  
   # Poincare plot
-  k, b, _, _, _ = linregress(intervals[:-1], intervals[1:])
+  k1, b1, _, _, _ = linregress(intervals[:-1], intervals[1:])
+  k = k1
+  b = b1
+  x_cross = np.mean(intervals[:-1])
+  y_cross = k * x_cross + b
 
-  # plt.plot(intervals[:-1], k * intervals[:-1] + b, c='b')
-  # plt.scatter(intervals[:-1], intervals[1:], alpha=0.2, s=4)
-  # plt.show()
-
-  # k_ = -1. / k
-  # b_ = b + np.mean(intervals[:-1]) * (k + 1. / k)
-
-  # projections1 = np.array(intervals[1:].shape[0], 2)
-  x_mean = np.mean(intervals[:-1])
-  y_mean = np.mean(intervals[1:])
-  projections1 = (((intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k) - x_mean) ** 2 + ((intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k) - y_mean) ** 2) ** 0.5
-
-  # plt.scatter((intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k), (intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k), alpha=0.1, c='g')
-  # plt.show()
-
-  k = -1. / k
-  b = -np.mean(intervals[:-1]) * (k + 1. / k)
-
-  projections2 = (((intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k) - x_mean) ** 2 + ((intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k) - y_mean) ** 2) ** 0.5
-  # plt.scatter((intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k), (intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k), alpha=0.1, c='r')
-  # plt.show()
+  projection1x = (intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k)
+  projection1y = (intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k)
+  distances1 = ((projection1x - x_cross) ** 2 + (projection1y - y_cross) ** 2) ** 0.5
   
+  k = -1. / k 
+  b = -x_cross * (k + 1. / k) + b
 
-  features.set_value('poincSD1', np.std(projections1))
-  features.set_value('poincSD2', np.std(projections2))
+  projection2x = (intervals[1:] + intervals[:-1] / k - b) / (k + 1.0 / k)
+  projection2y = (intervals[1:] * k + intervals[:-1] + b / k) / (k + 1.0 / k)
+  distances2 = ((projection1x - x_cross) ** 2 + (projection1y - y_cross) ** 2) ** 0.5
 
-  w = np.zeros(intervals.shape[0])
-  mi = np.mean(intervals)
-  w[1:] = np.array([w[i-1] + intervals[i] - mi for i in xrange(1, intervals.shape[0])])
-  ls = [2, 4, 6, 8, 11, 16, 20, 25, 32, 35, 46, 58, 64, 72, 80, 96, 128]
-  fl = np.zeros(len(ls))
-  for li, l in enumerate(ls):
-    e = 0
-    for j in xrange(l):
-      i0 = j * w.shape[0] / l
-      i1 = (j + 1) * w.shape[0] / l
-      std = linregress(np.arange(i0, i1, 1), w[i0:i1])[-1]
-      e += std**2 * w.shape[0] / l
-    fl[li] = np.sqrt(e / l)
-  l0 = 12
+  features.set_value('poincSD1', np.std(distances1))
+  features.set_value('poincSD2', np.std(distances2))
+
+  if vizualization:
+    plt.scatter(intervals[:-1], intervals[1:], c='g', alpha=0.05, s=3)
+    plt.plot(np.arange(np.min(intervals[:-1]), np.max(intervals[:-1])), k1 * np.arange(np.min(intervals[:-1]), np.max(intervals[:-1])) + b1, c='b')
+    plt.plot(np.arange(np.min(intervals[:-1]), np.max(intervals[:-1])), k * np.arange(np.min(intervals[:-1]), np.max(intervals[:-1])) + b, c='r')
+    plt.scatter(projection1x, projection1y, c='b', alpha=0.1, s=10)
+    plt.scatter(projection2x, projection2y, c='b', alpha=0.1, s=10)
+    plt.show()
+
+  # Non-Linear Domain Analysis
+  y = np.zeros(len(intervals))
+  B_ave = np.mean(intervals)
+  y[0] = intervals[0] - B_ave 
+  for k in xrange(1, intervals.shape[0]):
+    y[k] = y[k-1] + intervals[k] - B_ave
+
+  i = 0
+  F = np.zeros(len(box_lengths))
+  for n in box_lengths:
+
+    box_number = intervals.shape[0] / n
+    y_n = np.zeros(intervals.shape[0])
+    trends = np.zeros((box_number, 2))
+    
+    for box_idx in xrange(box_number):
+      trends[box_idx][0], trends[box_idx][1], _, _, _ = linregress(np.arange(box_idx * n, (box_idx+1) * n), y[box_idx * n : (box_idx+1) * n])
+      y_n[np.arange(box_idx * n, (box_idx+1) * n)] = trends[box_idx][0] * np.arange(box_idx * n, (box_idx+1) * n) + trends[box_idx][1]
+
+    F[i] = (np.mean(np.power(y - y_n, 2))) ** 0.5
+    i += 1
+    
+  alpha0, b0, _, _, _ = linregress(np.log(box_lengths), np.log(F))
+  alpha1, b1, _, _, _ = linregress(np.log(box_lengths[box_lengths < 17]), np.log(F[box_lengths < 17]))
+  alpha2, b2, _, _, _ = linregress(np.log(box_lengths[box_lengths > 16]), np.log(F[box_lengths > 16]))
   
-  alpha0 = linregress(np.log(ls[:l0])/np.log(10), np.log(fl[:l0])/np.log(10))[0]      
-  alpha1 = linregress(np.log(ls[l0:])/np.log(10), np.log(fl[l0:])/np.log(10))[0]
+  # plt.plot(np.log(box_lengths[box_lengths < 17]), alpha1 * np.log(box_lengths[box_lengths < 17]) + b1)
+  # plt.plot(np.log(box_lengths[box_lengths > 16]), alpha2 * np.log(box_lengths[box_lengths > 16]) + b2)
+  # plt.scatter(np.log(box_lengths), np.log(F))
+  # plt.show()
 
   features.set_value('alpha0', alpha0)
   features.set_value('alpha1', alpha1)
-  features.set_value('alphadiff', alpha1 - alpha0)
+  features.set_value('alpha2', alpha2)
   
   return features
 
@@ -336,7 +355,8 @@ if __name__ == '__main__':
 #   # frequency_features, frequency_features_names = calculate_frequency_features(read_rr_file('../../../../520307.rr', 0, None), get_default_pulse_features_params()['frequency features'])
 #   # for i in xrange(len(frequency_features_names)):
 #     # print frequency_features_names[i], frequency_features[i], get_default_pulse_features_params()['sampling rate']
-#   features = calculate_nonlinear_features(read_rr_file('../../../../../520307.rr', 0, None), get_default_pulse_features_params()['nonlinear features'])
+#   features = calculate_nonlinear_features(read_rr_file('../../../../../520307.rr', 0, None), get_default_pulse_features_params())
+
 #   print features
 
 #   pass
