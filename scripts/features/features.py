@@ -55,15 +55,15 @@ def generate_pulse_features(data_RR, options):
     * nonlinear
 
   Args
-    data_RR (np.array of np.int64): data in format (time [ms], interval [ms])
+    data_RR (np.array of np.int64): list of data in format (time [ms], interval [ms])
     options (dict): see get_default_pulse_features_params()
 
   Returns
-    features (pandas.DataFrame): names and calculated features for given pulse chunk 
+    features (pandas.DataFrame): list of (names and calculated features in pandas.DataFrame for given pulse chunk) 
   """
-
-  features = pd.concat([calculate_time_features(data_RR, options), calculate_frequency_features(data_RR, options), calculate_nonlinear_features(data_RR, options)])
-  
+  features = []
+  for data in data_RR:
+    features.append(pd.concat([calculate_time_features(data, options), calculate_frequency_features(data, options), calculate_nonlinear_features(data, options)]))
   return features
 
 
