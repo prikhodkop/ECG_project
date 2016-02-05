@@ -18,11 +18,6 @@ def split_time_chunks(filtered_data_RR, CHUNK_TIME_INTERVAL, MIN_NUMBER_OF_BEATS
                                                  None if no data are available after processing
   """
 
-  if MAX_NUMBER_OF_CHUNKS_PER_PATIENT is not None:
-    msg = 'Not implemented' #TODO
-    logging.critical(msg)
-    raise Exception(msg)
-
   if MIN_NUMBER_OF_BEATS_IN_CHUNK is None:
     MIN_NUMBER_OF_BEATS_IN_CHUNK = 1
 
@@ -31,6 +26,8 @@ def split_time_chunks(filtered_data_RR, CHUNK_TIME_INTERVAL, MIN_NUMBER_OF_BEATS
   start_time = filtered_data_RR[0, 0]   # in milliseconds
   finish_time = filtered_data_RR[-1, 0] # in milliseconds
   chunks_number = int( (finish_time - start_time) / fixed_duration )
+  if MAX_NUMBER_OF_CHUNKS_PER_PATIENT is not None:
+    chunks_number = min(chunks_number, MAX_NUMBER_OF_CHUNKS_PER_PATIENT)
 
   splitted_data_RR = [[] for i in xrange(chunks_number)]
   for cur_time, cur_interval in filtered_data_RR:

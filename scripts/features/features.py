@@ -47,24 +47,42 @@ def get_default_pulse_features_params():
   return options
 
 
-def generate_pulse_features(data_RR, options):
+def generate_pulse_features(splitted_data_RR, features_params):
   """
   Calculate features related to pulse chunks:
     * time-based
     * frequency-based
     * nonlinear
-
   Args
-    data_RR (np.array of np.int64): list of data in format (time [ms], interval [ms])
-    options (dict): see get_default_pulse_features_params()
-
+    splitted_data_RR (list of np.array of np.int64): where np.array has format (time [ms], interval [ms])
+    pulse_features_params (dict): see get_default_pulse_features_params()
   Returns
-    features (pandas.DataFrame): list of (names and calculated features in pandas.DataFrame for given pulse chunk) 
+    splitted_features (list of np.array of floats)
+    features_names (list of str): features names; the order of features in list relates to their order in splitted_features
   """
-  features = []
-  for data in data_RR:
-    features.append(pd.concat([calculate_time_features(data, options), calculate_frequency_features(data, options), calculate_nonlinear_features(data, options)]))
-  return features
+  
+  splitted_features = []
+  for data_RR in splitted_data_RR:
+    features_names = []
+    data_RR_features = []
+    if features_params['time features'] is not None:
+      time_features, time_features_names = calculate_time_features(data_RR, features_params)
+      data_RR_features += time_features
+      features_names += time_features_names
+
+    if features_params['frequency features'] is not None:
+      features, features_names = calculate_frequency_features(data_RR, features_params)
+      data_RR_features += features
+      features_names += features_names
+
+    if features_params['nonlinear features'] is not None:
+      nonlinear_features, nonlinear_features_names = calculate_nonlinear_features(data_RR, features_params)
+      data_RR_features += nonlinear_features
+      features_names += nonlinear_features_names
+
+    splitted_features.append(np.array(data_RR_features)) #!!!
+
+  return splitted_features, features_names
 
 
 def calculate_time_features(data_RR, options):
@@ -99,7 +117,7 @@ def calculate_time_features(data_RR, options):
         mean_intervals.append(np.mean(intervals[(i < times) * (times < i + step)]))
       features.set_value('SDA' + str(step) + 'NN', np.std(mean_intervals))
     else:
-      features.set_value('SDA' + str(step) + 'NN', None)
+      features.set_value('SDA' + str(step) + 'NN', np.nan)
 
   for step in options['time features']['step SDNNind']:
     if step < times[-1] / 2:
@@ -108,7 +126,7 @@ def calculate_time_features(data_RR, options):
         std_intervals.append(np.std(intervals[(i < times) * (times < i + step)]))
       features.set_value('SD' + str(step) + 'NNind', np.mean(std_intervals))
     else:
-      features.set_value('SD' + str(step) + 'NNind', None)
+      features.set_value('SD' + str(step) + 'NNind', np.nan)
 
   diff = intervals[1:] - intervals[:-1]
   for threshold in options['time features']['threshold NN']:
@@ -125,7 +143,7 @@ def calculate_time_features(data_RR, options):
         mean_intervals.append(np.mean(60. * sampling_rate / intervals[(i < times) * (times < i + step)]))
       features.set_value('sd' + str(step) + 'HR', np.std(mean_intervals))
     else:
-      features.set_value('sd' + str(step) + 'HR', None)
+      features.set_value('sd' + str(step) + 'HR', np.nan)
   
   # not reviewed
   M, N, S = tg.apply_grad_descent(intervals)
@@ -139,8 +157,10 @@ def calculate_time_features(data_RR, options):
   features.set_value('meanSD', np.mean(np.fabs(diff)))
   features.set_value('stdSD', np.std(np.fabs(diff)))
   
+  features_names = list(features.index)
+  features_values = list(features)
 
-  return features
+  return list(features_values), list(features_names)
 
 
 def calculate_frequency_features(data_RR, options):
@@ -203,7 +223,10 @@ def calculate_frequency_features(data_RR, options):
 
   features.set_value('LF/HF', features['aLF'] / features['aHF'])
 
-  return features
+  features_names = list(features.index)
+  features_values = list(features)
+
+  return list(features_values), list(features_names)
 
 
 def calculate_nonlinear_features(data_RR, options):
@@ -290,7 +313,7 @@ def calculate_nonlinear_features(data_RR, options):
   limit_for_sample_size = options['nonlinear features']['limit for sample size']
 
   if size > limit_for_sample_size:
-    features.set_value('sampen', None)
+    features.set_value('sampen', np.nan)
 
   else:
     r = 1000*r
@@ -378,7 +401,10 @@ def calculate_nonlinear_features(data_RR, options):
   features.set_value('alpha1', alpha1)
   features.set_value('alpha2', alpha2)
   
-  return features
+  features_names = list(features.index)
+  features_values = list(features)
+
+  return list(features_values), list(features_names)
 
 
 # #debug
@@ -420,6 +446,24 @@ def calculate_nonlinear_features(data_RR, options):
 #   return np.array(ans)
 
 
+def get_features_matrix(splitted_pulse_features):
+  """
+  Args
+    splitted_pulse_features (list of np.array of floats)
+  Returns
+    pulse_features_matrix
+  """
+
+  try:
+    pulse_features_matrix = np.vstack(splitted_pulse_features)
+  except Exception as e:
+    msg = "Can\'t transform splitted features to matrix: %s"%e
+    logging.critical(msg)
+    raise Exception(msg)
+
+  return pulse_features_matrix
+
+
 def get_stat_features(stat_features_names, stat_info, GIDN):
   # TODO
 
@@ -435,8 +479,7 @@ if __name__ == '__main__':
 
   # options = get_default_pulse_features_params()
   # options['save pic'] = True
-  # features = generate_pulse_features(read_rr_file('../../../../../520307.rr', 0, None)[:300], options)
-  # print features
+  # print generate_pulse_features([read_rr_file('../../../../../520307.rr', 0, None)[:300]], options)
 
   pass
 
