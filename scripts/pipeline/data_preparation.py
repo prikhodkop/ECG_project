@@ -45,7 +45,7 @@ if __name__ == '__main__':
   sample_name = OBJECTIVE_NAME + '_3' # train-test filename
   SEED = 0
   
-  MAX_NUMBER_OF_CHUNKS_PER_PATIENT = None
+  MAX_NUMBER_OF_CHUNKS_PER_PATIENT = None # Note that None related ALL CHUNKS
   CHUNK_TYPE = 'Fixed Time' # 'Fixed beats number' 
 
   if CHUNK_TYPE == 'Fixed Time':

@@ -71,9 +71,9 @@ def generate_pulse_features(splitted_data_RR, features_params):
       features_names += time_features_names
 
     if features_params['frequency features'] is not None:
-      features, features_names = calculate_frequency_features(data_RR, features_params)
-      data_RR_features += features
-      features_names += features_names
+      frequency_features, frequency_features_names = calculate_frequency_features(data_RR, features_params)
+      data_RR_features += frequency_features
+      features_names += frequency_features_names
 
     if features_params['nonlinear features'] is not None:
       nonlinear_features, nonlinear_features_names = calculate_nonlinear_features(data_RR, features_params)
