@@ -31,13 +31,12 @@ if __name__ == '__main__':
   
   ###########################################################
   # Settings
-  
-  #!!!
-  USED_EXAMPLES_NUMBER = None # 'None' means that all examples are used; otherwise randomly selected
 
-  #!!!
-  OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval' #!!!!
-  sample_name = OBJECTIVE_NAME + '_2' # train-test filename
+  USED_EXAMPLES_NUMBER = None # 'None' means that all examples are used; otherwise randomly selected
+  
+  EXCLUDE_NANS = True
+  OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
+  sample_name = OBJECTIVE_NAME + '_3' # train-test filename
   SEED = 0
 
 
@@ -45,7 +44,7 @@ if __name__ == '__main__':
       ("Dummy", DummyClassifier(strategy='stratified')), # see http://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html
       # ("Linear SVM", SVC(kernel="linear", C=0.025)),
       # ("RBF SVM", SVC(gamma=2, C=1)),
-      # ("Decision Tree", DecisionTreeClassifier(max_depth=5)),
+      ("Decision Tree", DecisionTreeClassifier(max_depth=5)),
       ("Random Forest", RandomForestClassifier(n_estimators=100)),
       ("Nearest Neighbors", KNeighborsClassifier(3)),
       # ("AdaBoost", AdaBoostClassifier()),
@@ -60,8 +59,23 @@ if __name__ == '__main__':
   ################################################################
   # Prepare train and test samples
   trainX, trainY, testX, testY, sample_info = dl.load_hdf5_sample(sample_name)
+  sample_info['Features names'] = np.array(sample_info['Features names'])
   logging.info('Training and test samples are loaded from file %s'%sample_info['path'])
+
+  if EXCLUDE_NANS:
+    logging.info('Exclude NaNs from train and test features')
+    nans_counter = np.sum(np.isnan(trainX[:, :]), axis=0) + np.sum(np.isnan(testX[:, :]), axis=0)
+    features_idx = nans_counter == 0
+    
+    if np.any(~features_idx):
+      excluded_features = sample_info['Features names'][~features_idx]
+      logging.warning('Some features were excluded because of NaNs: %s'%excluded_features)
+    
+    trainX = trainX[:, features_idx]
+    testX = testX[:, features_idx]
+
   if USED_EXAMPLES_NUMBER is not None:
+    logging.warning('Only %s examples is used for model learning!'%USED_EXAMPLES_NUMBER)
     idx = np.random.choice(range(trainX.shape[0]), size=USED_EXAMPLES_NUMBER, replace=False)
     trainX = trainX[idx]
     trainY = trainY[idx]
@@ -80,7 +94,7 @@ if __name__ == '__main__':
 
   for name, clf in classifiers:
     logging.info('Algorithm: ====================== %s =========================='%name)
-    logging.info('Features names: %s'%sample_info['Features names'])
+    logging.info('Features names: %s'%sample_info['Features names'][features_idx])
     clf.fit(trainX, trainY)
     mu.analyse_results(clf, testX, testY)
     logging.info('Objective classes names: %s'%sample_info['Objective classes names']) 
