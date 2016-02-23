@@ -42,14 +42,14 @@ if __name__ == '__main__':
   stat_features_names = []  # e.g. ['Sex', 'BMIgr']
 
   OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
-  sample_name = OBJECTIVE_NAME + '_3' # train-test filename
+  sample_name = OBJECTIVE_NAME + '_3g' # train-test filename
   SEED = 0
   
   MAX_NUMBER_OF_CHUNKS_PER_PATIENT = None # Note that None related ALL CHUNKS
   CHUNK_TYPE = 'Fixed Time' # 'Fixed beats number' 
 
   if CHUNK_TYPE == 'Fixed Time':
-    CHUNK_TIME_INTERVAL = 5.0 # minutes 
+    CHUNK_TIME_INTERVAL = 5.0 # minutes
     MIN_NUMBER_OF_BEATS_IN_CHUNK = 10 # beats
 
   elif CHUNK_TYPE == 'Fixed beats number':
@@ -143,18 +143,41 @@ if __name__ == '__main__':
 
     splitted_data_RR, initial_times = dp.time_initialization(splitted_data_RR) # splitted_data_RR (list of np.array): 
     logging.debug('Set start time for each chunk equal zero') # np.array of np.int64 in format (time [ms], intervals [ms])
+
+    # Light-features #!!!
+    # pulse_features_params =  {'use initial_times':  True,
+    #                           'sampling rate':      1000, #Hz 
+    #                           'vizualization':      False, # demonstration of sample features in graphic manner  
+    #                           'save pic':           False, # saving pics of sample features in graphic manner  
+    #                           'time features':      { 'step SDANN': [60000], #ms, window size for computation SDANN, see [1]
+    #                                                   'step SDNNind': [60000], #ms, window size for computation SDNNind, see [1]
+    #                                                   'step sdHR': [600000], #ms, window size for coputation sdHR, see [1]
+    #                                                   'threshold NN': [20, 50], #ms, threshold for coputation NNx ans pNNx, see [1]
+    #                                                   'threshold outlier': 0.2, #ms, threshold for coputation outlier, see [1]
+    #                                                   'triangular features': False,
+    #                                                 },     
+
+    #                           'frequency features': { 'frequency bounds': [0., 0.0033, 0.04, 0.15, 0.4], #Hz bounds for ULF, VLF, LF and HF, see[1]
+    #                                                   'frequency range': [0.001, 0.4, 200] #Hz lowest and highest frequencies, see[1]
+    #                                                 },
+
+    #                           'nonlinear features': None 
+    #                          }
+
+
     
     splitted_pulse_features, pulse_features_names = fea.generate_pulse_features(splitted_data_RR, 
-      pulse_features_params) # (list of np.array of floats)
-
+      pulse_features_params, initial_times=initial_times) # (list of np.array of floats)
+    
     stat_features = fea.get_stat_features(stat_features_names, stat_info, GIDN) #TODO
 
     GIDN_features = fea.get_features_matrix(splitted_pulse_features) # (np.array) [chunks * features]
 
     sample_info = { 'Objective classes names': objective_classes_names, 
-                    'Filtering params': RR_filtering_params,
-                    'Features params': pulse_features_params,
-                    'Features names': pulse_features_names#!!!
+                    'Filtering params':        RR_filtering_params,
+                    'Features params':         pulse_features_params,
+                    'Features names':          pulse_features_names,
+                    'CHUNK TIME INTERVAL':     CHUNK_TIME_INTERVAL
                   }
 
     X[GIDN] = GIDN_features

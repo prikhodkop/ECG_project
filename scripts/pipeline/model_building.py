@@ -23,7 +23,9 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.dummy import DummyClassifier
+from sklearn.linear_model import LogisticRegression
 
+import xgboost as xgb
 
 
 
@@ -36,19 +38,24 @@ if __name__ == '__main__':
   
   EXCLUDE_NANS = True
   OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
-  sample_name = OBJECTIVE_NAME + '_3' # train-test filename
+  sample_name = OBJECTIVE_NAME + '_3e' # train-test filename
   SEED = 0
+
+
+  USE_DAY_TIME = False #!!!
 
 
   classifiers = [
       ("Dummy", DummyClassifier(strategy='stratified')), # see http://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html
       # ("Linear SVM", SVC(kernel="linear", C=0.025)),
       # ("RBF SVM", SVC(gamma=2, C=1)),
-      ("Decision Tree", DecisionTreeClassifier(max_depth=5)),
-      ("Random Forest", RandomForestClassifier(n_estimators=100)),
-      ("Nearest Neighbors", KNeighborsClassifier(3)),
+      #("Decision Tree", DecisionTreeClassifier(max_depth=5)),
+      #("Nearest Neighbors", KNeighborsClassifier(3)),
       # ("AdaBoost", AdaBoostClassifier()),
-      ("Naive Bayes", GaussianNB())
+      ("Naive Bayes", GaussianNB()),
+      ("LogisticRegression", LogisticRegression()),
+      ("Random Forest", RandomForestClassifier(n_estimators=100)),
+      ("XGBoost", xgb.XGBClassifier())
       ] # TODO: xgboost
 
   ###############################################################
@@ -59,8 +66,15 @@ if __name__ == '__main__':
   ################################################################
   # Prepare train and test samples
   trainX, trainY, testX, testY, sample_info = dl.load_hdf5_sample(sample_name)
-  sample_info['Features names'] = np.array(sample_info['Features names'])
+  features_names = np.array(sample_info['Features names'])
   logging.info('Training and test samples are loaded from file %s'%sample_info['path'])
+  
+  excluded_features = []
+  if not USE_DAY_TIME:
+    trainX = trainX[:, 1:]
+    testX = testX[:, 1:]
+    excluded_features.append(features_names[0])
+    features_names = features_names[1:]
 
   if EXCLUDE_NANS:
     logging.info('Exclude NaNs from train and test features')
@@ -68,8 +82,8 @@ if __name__ == '__main__':
     features_idx = nans_counter == 0
     
     if np.any(~features_idx):
-      excluded_features = sample_info['Features names'][~features_idx]
-      logging.warning('Some features were excluded because of NaNs: %s'%excluded_features)
+      excluded_features += features_names[~features_idx].tolist()
+      logging.warning('Some features were excluded because of NaNs: %s'%features_names[~features_idx])
     
     trainX = trainX[:, features_idx]
     testX = testX[:, features_idx]
@@ -83,6 +97,7 @@ if __name__ == '__main__':
   dp.training_stats(trainX, trainY, testX, testY)
   logging.info('Sample info:\n%s'%sample_info)
   logging.info('Standartization of training and test samples.')
+
   scaler = preprocessing.StandardScaler().fit(trainX)
   trainX = scaler.transform(trainX) 
   testX = scaler.transform(testX) 
@@ -94,14 +109,14 @@ if __name__ == '__main__':
 
   for name, clf in classifiers:
     logging.info('Algorithm: ====================== %s =========================='%name)
-    logging.info('Features names: %s'%sample_info['Features names'][features_idx])
+    logging.info('Features names: %s'%features_names[features_idx])
     clf.fit(trainX, trainY)
     mu.analyse_results(clf, testX, testY)
     logging.info('Objective classes names: %s'%sample_info['Objective classes names']) 
     clfs[name] = clf
   
-  models_name = conf.path_to_models + 'clfs_' + sample_name + '.pickle'
-  import cPickle as pickle
-  with open(models_name, 'wb') as f:
-    pickle.dump(clfs, f)
+  #models_name = conf.path_to_models + 'clfs_' + sample_name + '.pickle'
+  #import cPickle as pickle
+  #with open(models_name, 'wb') as f:
+  #  pickle.dump(clfs, f)
 

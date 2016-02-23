@@ -22,14 +22,16 @@ def get_default_pulse_features_params():
   Return dict of default pulse features parameters
   'None' means no actions
   """
-  options =  {'sampling rate':      1000, #Hz 
+  options =  {'use initial_times':  True,
+              'sampling rate':      1000, #Hz 
               'vizualization':      False, # demonstration of sample features in graphic manner  
               'save pic':           False, # saving pics of sample features in graphic manner  
               'time features':      { 'step SDANN': [60000], #ms, window size for computation SDANN, see [1]
                                       'step SDNNind': [60000], #ms, window size for computation SDNNind, see [1]
                                       'step sdHR': [600000], #ms, window size for coputation sdHR, see [1]
                                       'threshold NN': [20, 50], #ms, threshold for coputation NNx ans pNNx, see [1]
-                                      'threshold outlier': 0.2, #ms, threshold for coputation outlier, see [1]
+                                      'threshold outlier': 0.2, # relative threshold for coputation outlier, see [1]
+                                      'triangular features': True,
                                     },     
 
               'frequency features': { 'frequency bounds': [0., 0.0033, 0.04, 0.15, 0.4], #Hz bounds for ULF, VLF, LF and HF, see[1]
@@ -47,7 +49,7 @@ def get_default_pulse_features_params():
   return options
 
 
-def generate_pulse_features(splitted_data_RR, features_params):
+def generate_pulse_features(splitted_data_RR, features_params, initial_times=None):
   """
   Calculate features related to pulse chunks:
     * time-based
@@ -56,15 +58,21 @@ def generate_pulse_features(splitted_data_RR, features_params):
   Args
     splitted_data_RR (list of np.array of np.int64): where np.array has format (time [ms], interval [ms])
     pulse_features_params (dict): see get_default_pulse_features_params()
+    initial_times (list of int): list of chunks day time
   Returns
     splitted_features (list of np.array of floats)
     features_names (list of str): features names; the order of features in list relates to their order in splitted_features
   """
   
   splitted_features = []
-  for data_RR in splitted_data_RR:
+  for example_number, data_RR in enumerate(splitted_data_RR):
     features_names = []
     data_RR_features = []
+
+    if features_params['use initial_times']:
+      features_names += ['initial_time']
+      data_RR_features += [initial_times[example_number]]
+
     if features_params['time features'] is not None:
       time_features, time_features_names = calculate_time_features(data_RR, features_params)
       data_RR_features += time_features
@@ -146,9 +154,10 @@ def calculate_time_features(data_RR, options):
       features.set_value('sd' + str(step) + 'HR', np.nan)
   
   # not reviewed
-  M, N, S = tg.apply_grad_descent(intervals)
-  features.set_value('HRVti', intervals.shape[0] / 2. * (M + N))
-  features.set_value('TINN', M - N)
+  if options['time features']['triangular features']:
+    M, N, S = tg.apply_grad_descent(intervals)
+    features.set_value('HRVti', intervals.shape[0] / 2. * (M + N))
+    features.set_value('TINN', M - N)
 
   threshold = options['time features']['threshold outlier']
   features.set_value('outlier', np.sum(np.fabs(intervals[1:]/intervals[:-1] - 1) > threshold) / float(intervals.shape[0] - 1))

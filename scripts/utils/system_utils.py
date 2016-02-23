@@ -10,7 +10,12 @@ except:
 
 def check_memory(memory_threshold=99.0, verbose=False):
   if sys_utils:
-    mem_per = psutil.phymem_usage().percent
+
+    try:
+      mem_per = psutil.virtual_memory().percent
+    except:
+      mem_per = psutil.phymem_usage().percent
+
     msg = "%s%% of memory is used"%mem_per
 
     if mem_per >= memory_threshold:
@@ -21,3 +26,6 @@ def check_memory(memory_threshold=99.0, verbose=False):
 
 if __name__ == '__main__':
   pass
+
+
+
