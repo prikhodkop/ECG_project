@@ -9,7 +9,7 @@ import pickle
 import sys
 sys.path.append('..') #!!!
 import project_config as conf
-from utils import logg 
+from utils import logg
 
 #TODO
 '''
@@ -18,26 +18,74 @@ GIDN is the patient identifier, [int.32]
 '''
 
 
-def get_sleep_time(path_to_sleep):
-  ''' Read sleep and awake time '''
+def get_sleep_time(path_to_sleep, filename='sleep', version=1):
+  ''' Read sleep and awake time
+      Version 1: returns dict 'start', 'end' with start and end times for all gidns
+      Version 2: returns same pandas data frame as in sleep.dta file
+      with columns 'sleep_trend_start_corr' and 'sleep_trend_end_corr' added.
+  '''
   sleep = read_dta('sleep', data_folder=path_to_sleep)
+
   GIDNs = sleep['GIDN']
-  start = sleep['Hol_Sleep_Start_Trend']
-  end = sleep['Hol_Sleep_End_Trend']
-  sleep_time = {'start':{}, 'end':{}}
+
+  if version == 1:
+      sleep_time = {'start':{}, 'end':{}}
+  elif version > 1:
+      sleep['sleep_trend_start_corr'] = np.nan
+      sleep['sleep_trend_end_corr'] = np.nan
+      sleep['sleep_diary_start_corr'] = np.nan
+      sleep['sleep_diary_end_corr'] = np.nan
+      start_times = []
+      end_times = []
+      start_diary_times = []
+      end_diary_times = []
+
+  def do_correction(start, end):
+    if start / (60 * 60 * 1000) < 18:  # new day correction
+        start += 24 * 60 * 60 * 1000
+    if end < start:
+        end += 24 * 60 * 60 * 1000
+    return start, end
 
   for i, gidn in enumerate(GIDNs):
-    if (not np.isnan(start[i])) and (not np.isnan(end[i])):
-      sleep_time['start'][gidn] = float(start[i])
-      sleep_time['end'][gidn] = float(end[i])
+    start = sleep['Hol_Sleep_Start_Trend'][i]
+    end = sleep['Hol_Sleep_End_Trend'][i]
 
-      # new day
-      if sleep_time['start'][gidn] / (60 * 60 * 1000) < 18: 
-        sleep_time['start'][gidn] += 24 * 60 * 60 * 1000
+    start_diary = sleep['Hol_Sleep_Start_Diary'][i]
+    end_diary = sleep['Hol_Sleep_End_Diary'][i]
 
-      if sleep_time['end'][gidn] < sleep_time['start'][gidn]:
-        sleep_time['end'][gidn] += 24 * 60 * 60 * 1000
-  return sleep_time
+    start, end = do_correction(start, end)
+    start_diary, end_diary = do_correction(start_diary, end_diary)
+
+    if (not np.isnan(start)) and (not np.isnan(end)):
+        if version == 1:
+          sleep_time['start'][gidn] = float(start)
+          sleep_time['end'][gidn] = float(end)
+        if version > 1:
+            start_times.append(start)
+            end_times.append(end)
+    else:
+        if version > 1:
+            start_times.append(np.nan)
+            end_times.append(np.nan)
+
+    if version > 1:
+        if (not np.isnan(start_diary)) and (not np.isnan(end_diary)):
+            start_diary_times.append(start_diary)
+            end_diary_times.append(end_diary)
+        else:
+            start_diary_times.append(np.nan)
+            end_diary_times.append(np.nan)
+
+  if version == 1:
+      return sleep_time
+  elif version > 1:
+      sleep['sleep_trend_start_corr'] = start_times
+      sleep['sleep_trend_end_corr'] = end_times
+
+      sleep['sleep_diary_start_corr'] = start_diary_times
+      sleep['sleep_diary_end_corr'] = end_diary_times
+      return sleep
 
 def get_patients_list_in_folder(path_to_patients):
   ''' Return list that consists of files with patients data '''
@@ -46,7 +94,7 @@ def get_patients_list_in_folder(path_to_patients):
   return files
 
 
-def load_RR_data(GIDN, path):
+def load_RR_data(GIDN, path, version=1):
     """
     Get loaded RR data for the given patient.
 
@@ -59,14 +107,14 @@ def load_RR_data(GIDN, path):
           * time of pulse beat [ms], starting from midnight;
           * interval between successive beats [ms];
           * interval type ['N', 'A', etc.]. Note that 'N' is a normal type and preferable.
-    
-    The output array length varies among patients.    
+
+    The output array length varies among patients.
     """
-    
+
     RR_file_name = path + str(GIDN)+'.RR'
     logging.debug(u'Loading RR data for patient %s'%GIDN)
     try:
-        with open(RR_file_name) as csvfile: 
+        with open(RR_file_name) as csvfile:
             reader = csv.reader(csvfile, delimiter='\t')
             start_diary = next(reader)[0]  # e.g. 12:08:58
             #print 'start_diary',start_diary
@@ -75,22 +123,30 @@ def load_RR_data(GIDN, path):
             h,m,s = [int(i) for i in start_diary.split(':')]
             delta = 1000*(h*60*60 + m*60 + s)
             logging.debug(u'Initial time shift is %s ms'%delta)
-        
-        with open(RR_file_name) as csvfile: 
-            data_RR = pd.read_csv(csvfile, sep='\t', skiprows=1, header=None) # skiprows=1 !!!
-            data_RR.drop(data_RR.index[:1], inplace=True) # first row data is invalid, e.g. '10350 10350 N'
-            data_RR.columns = ['time', 'interval', 'type']
 
-        data_RR = data_RR.values
-        data_RR[:, 0] += delta     # add initial time shifting
+        with open(RR_file_name) as csvfile:
+            data_RR = pd.read_csv(csvfile, sep='\t', skiprows=1, header=None) # skiprows=1 !!!
+            if version == 1:
+                data_RR.columns = ['time', 'interval', 'type']
+            elif version > 1:
+                data_RR.columns = ['time', 'interval', 'beat_type']
+
+        if version > 1:
+            data_RR['interval_type'] = [None] + list(data_RR['beat_type'][:-1].as_matrix()+data_RR['beat_type'][1:].as_matrix())
+
+        data_RR['time'] += delta     # add initial time shifting
+        data_RR.drop(data_RR.index[:1], inplace=True) # first row data is invalid, e.g. '10350 10350 N'
+
+        if version == 1:
+            data_RR = data_RR.values
 
     except IOError as e:
       data_RR = None
       logging.warning(u'Loading error for RR file: %s'%e)
 
-    except Exception as e:
-      raise Exception("Unexpected error: %s"%e)
-    
+    # except Exception as e:
+    #   raise Exception("Unexpected error: %s"%e)
+
     return data_RR
 
 def read_dta(name, data_folder='../../data/dta/', encoding='cp1252'):
@@ -101,15 +157,15 @@ def read_dta(name, data_folder='../../data/dta/', encoding='cp1252'):
     mortality_SAHR_ver101214
   """
   full_name = data_folder + name +'.dta'
-  
+
   with open(full_name, 'rb') as f:
     data = pd.read_stata(f, encoding=encoding)
-  
+
   return data
 
 def get_GIDNS(path_to_dta):
   """
-  Get GIDN identifiers for all patients sorted in ascending order. Based on selected_pp. 
+  Get GIDN identifiers for all patients sorted in ascending order. Based on selected_pp.
   Output: GIDNS [np.array] of GIDN [int.32]
   """
   selected_pp = read_dta('selected_pp', data_folder=path_to_dta)
@@ -135,14 +191,14 @@ def save_hdf5_sample(sample_name, sample_info, trainX, trainY, testX, testY):
 
 def load_hdf5_sample(sample_name):
   hdf5_filename = conf.path_to_sample+sample_name+'.h5'
-  
+
   h5f = h5py.File(hdf5_filename,'r')
   trainX = h5f['trainX'][:]
   trainY = h5f['trainY'][:]
   testX = h5f['testX'][:]
   testY = h5f['testY'][:]
   h5f.close()
-  
+
   picke_filename = conf.path_to_sample+sample_name+'.pkl'
   with open(picke_filename, 'rb') as f:
     sample_info = pickle.load(f)
@@ -160,11 +216,10 @@ if __name__ == '__main__':
 
   print GIDNS
   print len(GIDNS), 'patients'
-  
+
   GIDN = GIDNS[0]
   data_RR = load_RR_data(GIDN, path=conf.path_to_RR)
   print '\ndata_RR:\n', data_RR, '\n'
 
   data_RR = load_RR_data(GIDN=1234567890, path=conf.path_to_RR)
   print 'data_RR:', data_RR
-  
