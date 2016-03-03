@@ -40,9 +40,9 @@ if __name__ == '__main__':
   logging.warning('Pulse features parameters:\n%s'%pulse_features_params)
 
   stat_features_names = []  # e.g. ['Sex', 'BMIgr']
-
-  OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
-  sample_name = OBJECTIVE_NAME + '_3g' # train-test filename
+  
+  OBJECTIVE_NAME = 'patients_ver1' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
+  sample_name = OBJECTIVE_NAME + '_1' # train-test filename
   SEED = 0
   
   MAX_NUMBER_OF_CHUNKS_PER_PATIENT = None # Note that None related ALL CHUNKS
@@ -135,6 +135,7 @@ if __name__ == '__main__':
     logging.debug('Splitting intervals')
     
     GIDN_y, objective_classes_names = obj.generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN) # np.array of objective values (float)
+    #print 'dQWD', GIDN_y.shape
     if GIDN_y is None:
       objective_problem_patients.append(GIDN)
       continue
@@ -144,7 +145,7 @@ if __name__ == '__main__':
     splitted_data_RR, initial_times = dp.time_initialization(splitted_data_RR) # splitted_data_RR (list of np.array): 
     logging.debug('Set start time for each chunk equal zero') # np.array of np.int64 in format (time [ms], intervals [ms])
 
-    # Light-features #!!!
+    #Light-features #!!!
     # pulse_features_params =  {'use initial_times':  True,
     #                           'sampling rate':      1000, #Hz 
     #                           'vizualization':      False, # demonstration of sample features in graphic manner  

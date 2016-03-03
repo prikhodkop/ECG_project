@@ -20,40 +20,60 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
 
   Returns
     1) y (np.array of floats): objective, e.g. sex, age, sleep status
-    objective_classes_names (dict)
+    objective_classes_names (dict or None)
 
     or
 
     2) None, None if objective is not available 
   """
+  objective_classes_names = None
 
   if OBJECTIVE_NAME == 'cl_sleep_interval':
     y, objective_classes_names = get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN)
 
   elif OBJECTIVE_NAME in ['Sex', 'BMIgr']: #TODO
-    y, objective_classes_names = get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN)
+    y = get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN)
 
+  elif OBJECTIVE_NAME == 'patients_ver1':
+    objective_classes_names = {}
+    objective_classes_names['targets'] = ['cl_sleep_interval', 'Sex', 'BMIgr', 'Age', 'MRT_CVD'] # , 'SelfHealth2'
+
+    sleep_y, sleep_classes_names = get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN)
+    
+    sex_y   = get_info_objective('Sex', splitted_data_RR, stat_info, GIDN)
+    bmigr_y = get_info_objective('BMIgr', splitted_data_RR, stat_info, GIDN)
+    age_y = get_info_objective('Age', splitted_data_RR, stat_info, GIDN)
+    cvd_y = get_info_objective('MRT_CVD', splitted_data_RR, stat_info, GIDN)
+    #health_y = get_info_objective('SelfHealth2', splitted_data_RR, stat_info, GIDN)
+    
+    objective_classes_names['cl_sleep_interval'] = sleep_classes_names
+
+    y = np.vstack((sleep_y, sex_y, bmigr_y, age_y, cvd_y)).T #  health_y,
+  
   else:
     msg = 'Not implemented objective type' #TODO
     logging.critical(msg)
     raise Exception(msg)
 
   if y is None:
-    return None, None
+    return None
   else:
-    return np.array([y]).T, objective_classes_names
+    return y, objective_classes_names
 
 
 def get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
   number_of_chunks = len(splitted_data_RR)
-  pp = stat_info['selected_pp']
-  GIDN_info = pp[pp['GIDN']==GIDN]
+
+  if OBJECTIVE_NAME in ['MRT_CVD']:
+    data = stat_info['mortality']
+  else:
+    data = stat_info['selected_pp']
   
-  obj_value = float(pp[pp['GIDN']==GIDN][OBJECTIVE_NAME])   
+  GIDN_info = data[data['GIDN']==GIDN]
+  obj_value = float(data[data['GIDN']==GIDN][OBJECTIVE_NAME])   
   y = [obj_value for i in xrange(number_of_chunks)]
-  # TODO !!!
-  #!!! what if not available?
-  return y, None
+  
+  return y
 
 
 
