@@ -25,7 +25,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
 
-import xgboost as xgb
+#import xgboost as xgb
 
 
 
@@ -37,12 +37,12 @@ if __name__ == '__main__':
   USED_EXAMPLES_NUMBER = None # 'None' means that all examples are used; otherwise randomly selected
   
   EXCLUDE_NANS = True
-  OBJECTIVE_NAME = 'cl_sleep_interval' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
-  sample_name = OBJECTIVE_NAME + '_3e' # train-test filename
+  OBJECTIVE_NAME = 'some_diseases_ver1' #'tuberculum'#'patients_ver1' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
+  sample_name = OBJECTIVE_NAME + '_1' # train-test filename
   SEED = 0
 
 
-  USE_DAY_TIME = False #!!!
+  USE_DAY_TIME = True#False #!!!!!!!!!!!!!
 
 
   classifiers = [
@@ -55,7 +55,7 @@ if __name__ == '__main__':
       ("Naive Bayes", GaussianNB()),
       ("LogisticRegression", LogisticRegression()),
       ("Random Forest", RandomForestClassifier(n_estimators=100)),
-      ("XGBoost", xgb.XGBClassifier())
+      #("XGBoost", xgb.XGBClassifier())
       ] # TODO: xgboost
 
   ###############################################################
@@ -68,9 +68,10 @@ if __name__ == '__main__':
   trainX, trainY, testX, testY, sample_info = dl.load_hdf5_sample(sample_name)
   features_names = np.array(sample_info['Features names'])
   logging.info('Training and test samples are loaded from file %s'%sample_info['path'])
-  
+
+
   excluded_features = []
-  if not USE_DAY_TIME:
+  if not USE_DAY_TIME: #!!! TO BE REWRITTEN
     trainX = trainX[:, 1:]
     testX = testX[:, 1:]
     excluded_features.append(features_names[0])

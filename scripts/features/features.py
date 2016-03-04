@@ -22,7 +22,7 @@ def get_default_pulse_features_params():
   Return dict of default pulse features parameters
   'None' means no actions
   """
-  options =  {'use initial_times':  True,
+  options =  {'use initial_times':  True, #!!!
               'sampling rate':      1000, #Hz 
               'vizualization':      False, # demonstration of sample features in graphic manner  
               'save pic':           False, # saving pics of sample features in graphic manner  

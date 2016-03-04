@@ -25,6 +25,8 @@ from filters import data_filtering as df
 from objectives import objectives as obj
 from features import features as fea
 
+import pandas as pd
+
 
 if __name__ == '__main__':
   
@@ -41,8 +43,8 @@ if __name__ == '__main__':
 
   stat_features_names = []  # e.g. ['Sex', 'BMIgr']
   
-  OBJECTIVE_NAME = 'patients_ver1' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
-  sample_name = OBJECTIVE_NAME + '_1' # train-test filename
+  OBJECTIVE_NAME = 'some_diseases_ver1' #'tuberculum'#'patients_ver1' # e.g. 'BMIgr', 'Sex', 'cl_sleep_interval'
+  sample_name = OBJECTIVE_NAME + '_2' # train-test filename
   SEED = 0
   
   MAX_NUMBER_OF_CHUNKS_PER_PATIENT = None # Note that None related ALL CHUNKS
@@ -65,8 +67,11 @@ if __name__ == '__main__':
 
   stat_info = { 'mortality':   dl.read_dta('mortality_SAHR_ver101214', data_folder=conf.path_to_dta),
                 'selected_pp': dl.read_dta('selected_pp', data_folder=conf.path_to_dta),
-                'sleep':       dl.get_sleep_time(conf.path_to_dta) 
+                'sleep':       dl.get_sleep_time(conf.path_to_dta),
+                'selected':    pd.read_csv(conf.path_to_dta+'selected.csv')
               }
+  #print stat_info['selected'] #!!!
+  #zxc
 
   #################################################################
   
@@ -146,22 +151,33 @@ if __name__ == '__main__':
     logging.debug('Set start time for each chunk equal zero') # np.array of np.int64 in format (time [ms], intervals [ms])
 
     #Light-features #!!!
-    # pulse_features_params =  {'use initial_times':  True,
+    pulse_features_params =  {'use initial_times':  True, #!!!
+                              'sampling rate':      1000, #Hz 
+                              'vizualization':      False, # demonstration of sample features in graphic manner  
+                              'save pic':           False, # saving pics of sample features in graphic manner  
+                              'time features':      { 'step SDANN': [60000], #ms, window size for computation SDANN, see [1]
+                                                      'step SDNNind': [60000], #ms, window size for computation SDNNind, see [1]
+                                                      'step sdHR': [600000], #ms, window size for coputation sdHR, see [1]
+                                                      'threshold NN': [20, 50], #ms, threshold for coputation NNx ans pNNx, see [1]
+                                                      'threshold outlier': 0.2, #ms, threshold for coputation outlier, see [1]
+                                                      'triangular features': False,
+                                                    },     
+
+                              'frequency features': { 'frequency bounds': [0., 0.0033, 0.04, 0.15, 0.4], #Hz bounds for ULF, VLF, LF and HF, see[1]
+                                                      'frequency range': [0.001, 0.4, 200] #Hz lowest and highest frequencies, see[1]
+                                                    },
+
+                              'nonlinear features': None 
+                             }
+
+
+    # super-light #!!!!
+    # pulse_features_params =  {'use initial_times':  True, #!!!
     #                           'sampling rate':      1000, #Hz 
     #                           'vizualization':      False, # demonstration of sample features in graphic manner  
     #                           'save pic':           False, # saving pics of sample features in graphic manner  
-    #                           'time features':      { 'step SDANN': [60000], #ms, window size for computation SDANN, see [1]
-    #                                                   'step SDNNind': [60000], #ms, window size for computation SDNNind, see [1]
-    #                                                   'step sdHR': [600000], #ms, window size for coputation sdHR, see [1]
-    #                                                   'threshold NN': [20, 50], #ms, threshold for coputation NNx ans pNNx, see [1]
-    #                                                   'threshold outlier': 0.2, #ms, threshold for coputation outlier, see [1]
-    #                                                   'triangular features': False,
-    #                                                 },     
-
-    #                           'frequency features': { 'frequency bounds': [0., 0.0033, 0.04, 0.15, 0.4], #Hz bounds for ULF, VLF, LF and HF, see[1]
-    #                                                   'frequency range': [0.001, 0.4, 200] #Hz lowest and highest frequencies, see[1]
-    #                                                 },
-
+    #                           'time features':      None,     
+    #                           'frequency features': None,
     #                           'nonlinear features': None 
     #                          }
 

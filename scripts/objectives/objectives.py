@@ -7,7 +7,6 @@ import project_config as conf
 from utils import logg 
 
 
-
 def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
   """
   Get objective values for prediction.
@@ -26,12 +25,13 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
 
     2) None, None if objective is not available 
   """
-  objective_classes_names = None
+  objective_classes_names = {}
+  objective_classes_names['features code'] = get_features_code()
 
   if OBJECTIVE_NAME == 'cl_sleep_interval':
     y, objective_classes_names = get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN)
 
-  elif OBJECTIVE_NAME in ['Sex', 'BMIgr']: #TODO
+  elif OBJECTIVE_NAME in ['Sex', 'BMIgr', 'tuberculum']: #TODO
     y = get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN)
 
   elif OBJECTIVE_NAME == 'patients_ver1':
@@ -49,28 +49,74 @@ def generate_examples(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
     objective_classes_names['cl_sleep_interval'] = sleep_classes_names
 
     y = np.vstack((sleep_y, sex_y, bmigr_y, age_y, cvd_y)).T #  health_y,
-  
+
+  elif  OBJECTIVE_NAME == 'some_diseases_ver1':
+
+    objective_classes_names['targets'] = ['stenocardia', 'kidney1', 'kidney2']
+    steno_y  = get_info_objective('stenocardia', splitted_data_RR, stat_info, GIDN)
+    kid1_y   = get_info_objective('kidney1', splitted_data_RR, stat_info, GIDN)
+    kid2_y   = get_info_objective('kidney2', splitted_data_RR, stat_info, GIDN)
+    
+    y = np.vstack((steno_y, kid1_y, kid2_y)).T
+
+    #print y.shape
+    #print y
+    
   else:
     msg = 'Not implemented objective type' #TODO
     logging.critical(msg)
     raise Exception(msg)
 
   if y is None:
-    return None
+    return None, None
   else:
     return y, objective_classes_names
 
 
+
+
+def get_features_code():
+  """
+  Feature name - Table name - Feature code
+  """
+  features_code = {'stenocardia':   ['selected', 'M8_4_19'], #!!!
+                   'kidney1':       ['selected', 'M8_4_28'], 
+                   'kidney2':       ['selected', 'M8_4_29']}
+
+  return features_code
+
 def get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
   number_of_chunks = len(splitted_data_RR)
-
-  if OBJECTIVE_NAME in ['MRT_CVD']:
-    data = stat_info['mortality']
-  else:
-    data = stat_info['selected_pp']
   
-  GIDN_info = data[data['GIDN']==GIDN]
-  obj_value = float(data[data['GIDN']==GIDN][OBJECTIVE_NAME])   
+  if OBJECTIVE_NAME not in ['stenocardia', 'kidney1', 'kidney2']:
+    raise Exception('Not implemented')
+
+  else:
+    features_code = get_features_code()
+    table_name, code = features_code[OBJECTIVE_NAME]
+
+    data = stat_info[table_name]
+    
+    raw_obj_value = data[data['GIDN']==GIDN][code].values[0] #
+
+    if raw_obj_value == 'No':
+      obj_value = 0.0
+    elif raw_obj_value == 'Have had':
+      obj_value = 1.0
+    elif raw_obj_value == 'Have now':
+      obj_value = 2.0
+    else:
+      try:
+        if np.isnan(raw_obj_value):
+          obj_value = np.nan
+        else:
+          raise Exception('Unknown status for %s: %s'%(GIDN, raw_obj_value))
+      except:
+        raise Exception('Unknown status for %s: %s'%(GIDN, raw_obj_value))
+
+  #print obj_value, GIDN_info #!!!
+  #zxc #!!
+
   y = [obj_value for i in xrange(number_of_chunks)]
   
   return y
@@ -102,6 +148,39 @@ def get_sleep_interval_objective(splitted_data_RR, stat_info, GIDN):
     objective_classes_names = {1.0:'sleep', 0.0:'awake'}
     return y, objective_classes_names
 
+# def get_info_objective(OBJECTIVE_NAME, splitted_data_RR, stat_info, GIDN):
+#   number_of_chunks = len(splitted_data_RR)
+
+#   objective_in_table = OBJECTIVE_NAME
+  
+#   if OBJECTIVE_NAME in ['MRT_CVD']:
+#     data = stat_info['mortality']
+#   elif OBJECTIVE_NAME == 'tuberculum':
+#     data = stat_info['selected']
+#   else:
+#     data = stat_info['selected_pp']
+  
+#   #GIDN_info = data[data['GIDN']==GIDN]
+#   #print 'rfvtf', data[objective_in_table] #!!!
+  
+#   if OBJECTIVE_NAME != 'tuberculum':
+#     obj_value = float(data[data['GIDN']==GIDN][objective_in_table]) 
+#   else:
+#     objective_in_table = 'M8_4_7'
+#     raw_obj_value = data[data['GIDN']==GIDN][objective_in_table]
+
+#     print raw_obj_value
+
+#     zxc
+
+#     if raw_obj_value == 'No':
+#       obj_value = 0.0
+#     elif raw_obj_value == 'Have had':
+#       obj_value = 1.0
+#     elif raw_obj_value == 'Have now':
+#       obj_value = 2.0
+#     else:
+#       raise Exception('Unknown tuberculum status for %s: %s'%(GIDN, raw_obj_value))
 
 
 if __name__ == '__main__':

@@ -160,8 +160,10 @@ def read_dta(name, data_folder='../../data/dta/', encoding='cp1252'):
 
   with open(full_name, 'rb') as f:
     data = pd.read_stata(f, encoding=encoding)
-
+    
   return data
+
+
 
 def get_GIDNS(path_to_dta):
   """
